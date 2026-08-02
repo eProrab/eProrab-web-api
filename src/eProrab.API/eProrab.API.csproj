@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>eProrab.API</RootNamespace>
+    <UserSecretsId>eprorab-api-secrets</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+	  <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\eProrab.Domain\eProrab.Domain.csproj" />
+    <ProjectReference Include="..\eProrab.Application\eProrab.Application.csproj" />
+    <ProjectReference Include="..\eProrab.Infrastructure\eProrab.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
