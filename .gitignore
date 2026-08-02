@@ -1,0 +1,71 @@
+## User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## User-specific files (MonoDevelop/Xamarin Studio)
+*.userprefs
+
+## Mono auto generated files
+mono_crash.*
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Re]leasePublic/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[尝]og/
+[Ll]ogs/
+
+## Visual Studio 2015/2017/2019/2022 cache directory
+.vs/
+
+## Visual Studio Profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+## Visual Studio Trace Log Files
+*.svclog
+*.trx
+
+## Diagnostic Report files
+*.diag_proto
+*.diag_report
+
+## Roslyn Analyzer Cache
+*.csi
+*.rsp
+
+## Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+## NuGet
+*.nupkg
+.nuget/
+
+## Secrets & local config
+appsettings.Development.json
+appsettings.*.local.json
+*.env
+
+## Logs & test output
+*.log
+TestResults/
+
+## OS junk
+.DS_Store
+Thumbs.db
