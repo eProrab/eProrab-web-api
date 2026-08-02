@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: eprorab-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: eprorab
+      POSTGRES_USER: eprorab
+      POSTGRES_PASSWORD: eprorab_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - eprorab-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eprorab -d eprorab"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eprorab-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=eprorab;Username=eprorab;Password=eprorab_dev_password"
+      Jwt__Issuer: "eProrab.API"
+      Jwt__Audience: "eProrab.Client"
+      Jwt__SigningKey: "REPLACE_WITH_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS"
+      SeedAdmin__Email: "admin@eprorab.az"
+      SeedAdmin__Password: "ChangeMe123!"
+    ports:
+      - "8080:8080"
+
+volumes:
+  eprorab-postgres-data:
