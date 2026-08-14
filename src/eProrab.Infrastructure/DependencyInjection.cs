@@ -1,7 +1,10 @@
 using eProrab.Application.Interfaces;
+using eProrab.Infrastructure.BackgroundJobs;
+using eProrab.Infrastructure.External.Scraping.OmidAz;
 using eProrab.Infrastructure.Identity;
 using eProrab.Infrastructure.Options;
 using eProrab.Infrastructure.Persistence;
+using eProrab.Infrastructure.Persistence.Repositories;
 using eProrab.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -48,6 +51,16 @@ public static class DependencyInjection
         services.AddScoped<IUserDirectoryService, UserDirectoryService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
+        //parser
+        services.AddHttpClient<OmidAzParser>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (compatible; eProrabBot/1.0)");
+        });
+
+        services.AddScoped<IPriceParser, OmidAzParser>();
+        services.AddScoped<IMaterialPriceRepository, MaterialPriceRepository>();
+        services.AddHostedService<OmidPriceSyncJob>();
 
         return services;
     }

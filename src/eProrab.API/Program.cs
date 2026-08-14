@@ -1,4 +1,5 @@
 using eProrab.API.Endpoints;
+using eProrab.API.Endpoints.Admin;
 using eProrab.API.Extensions;
 using eProrab.API.Middleware;
 using eProrab.Application;
@@ -98,6 +99,8 @@ app.MapWorkerCabinetEndpoints();
 app.MapWorkerBrowseEndpoints();
 app.MapJobEndpoints();
 app.MapAdminHiringEndpoints();
+//parser
+app.MapMaterialPricesEndpoints();
 
 app.MapGet("/", () => Results.Ok(new { service = "eProrab API", status = "running" }))
     .ExcludeFromDescription();
