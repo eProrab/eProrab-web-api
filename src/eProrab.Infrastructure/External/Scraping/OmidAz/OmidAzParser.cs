@@ -48,7 +48,18 @@ public class OmidAzParser : IPriceParser
 
                 try
                 {
-                    response = await _httpClient.GetFromJsonAsync<ShopifyProductsResponse>(url, cancellationToken);
+                    var httpResponse = await _httpClient.GetAsync(url, cancellationToken);
+                    _logger.LogInformation("Request to {Url} returned {StatusCode}", url, httpResponse.StatusCode);
+
+                    if (!httpResponse.IsSuccessStatusCode)
+                    {
+                        var body = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
+                        _logger.LogWarning("Non-success response body (first 300 chars): {Body}",
+                            body.Length > 300 ? body[..300] : body);
+                        break;
+                    }
+
+                    response = await httpResponse.Content.ReadFromJsonAsync<ShopifyProductsResponse>(cancellationToken: cancellationToken);
                 }
                 catch (Exception ex)
                 {

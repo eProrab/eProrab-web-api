@@ -55,7 +55,10 @@ public static class DependencyInjection
         services.AddHttpClient<OmidAzParser>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (compatible; eProrabBot/1.0)");
+            client.DefaultRequestHeaders.Add("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36");
+            client.DefaultRequestHeaders.Add("Accept", "application/json, text/plain, */*");
+            client.DefaultRequestHeaders.Add("Accept-Language", "az,en;q=0.9");
         });
 
         services.AddScoped<IPriceParser, OmidAzParser>();
