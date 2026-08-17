@@ -1,5 +1,4 @@
 using eProrab.API.Endpoints;
-using eProrab.API.Endpoints.Admin;
 using eProrab.API.Extensions;
 using eProrab.API.Middleware;
 using eProrab.Application;
