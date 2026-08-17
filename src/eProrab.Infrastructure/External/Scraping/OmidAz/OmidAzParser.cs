@@ -1,92 +1,129 @@
-﻿using AngleSharp;
+﻿using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 using eProrab.Application.DTOs;
 using eProrab.Application.Interfaces;
 using eProrab.Domain.Enums;
 using Microsoft.Extensions.Logging;
-using System.Globalization;
 
-namespace eProrab.Infrastructure.External.Scraping.OmidAz
+namespace eProrab.Infrastructure.External.Scraping.OmidAz;
+
+public class OmidAzParser : IPriceParser
 {
-    public class OmidAzParser : IPriceParser
+    private readonly HttpClient _httpClient;
+    private readonly ILogger<OmidAzParser> _logger;
+
+    public PriceSource Source => PriceSource.OmidAz;
+
+    //collection handles from omid.az
+    private static readonly string[] CollectionHandles =
     {
-        private readonly HttpClient _httpClient;
-        private readonly ILogger<OmidAzParser> _logger;
-        private const string ListingUrl = "https://omid.az/materials"; // TODO : double check etmek
+        "insaat-materiallari-f764",
+        "alci-suvaq-ve-materiallari-90f1",
+        "boya-mehsullari-c200",
+        "santexnika-abeb",
+        "elektrik-8873",
+        "xirdavat-ve-el-aletleri-e809"
+    };
 
-        public PriceSource Source => PriceSource.OmidAz;
+    private const int PageLimit = 250; // Shopify's max per page
 
-        public OmidAzParser(HttpClient httpClient, ILogger<OmidAzParser> logger)
+    public OmidAzParser(HttpClient httpClient, ILogger<OmidAzParser> logger)
+    {
+        _httpClient = httpClient;
+        _logger = logger;
+    }
+
+    public async Task<List<MaterialPriceDto>> ParseAsync(CancellationToken cancellationToken = default)
+    {
+        var results = new List<MaterialPriceDto>();
+
+        foreach (var handle in CollectionHandles)
         {
-            _httpClient = httpClient;
-            _logger = logger;
-        }
+            var page = 1;
 
-        public async Task<List<MaterialPriceDto>> ParseAsync(CancellationToken cancellationToken = default)
-        {
-            var results = new List<MaterialPriceDto>();
-
-            var html = await _httpClient.GetStringAsync(ListingUrl, cancellationToken);
-
-            var config = Configuration.Default;
-            using var context = BrowsingContext.New(config);
-            using var document = await context.OpenAsync(req => req.Content(html), cancellationToken);
-
-            // TODO : omid.az DevTools inspect etmek
-            var items = document.QuerySelectorAll(".product-card");
-
-            foreach (var item in items)
+            while (true)
             {
+                var url = $"https://omid.az/collections/{handle}/products.json?limit={PageLimit}&page={page}";
+                ShopifyProductsResponse? response;
+
                 try
                 {
-                    var name = item.QuerySelector(".product-title")?.TextContent.Trim();
-                    var priceText = item.QuerySelector(".product-price")?.TextContent.Trim();
-                    var unit = item.QuerySelector(".product-unit")?.TextContent.Trim();
-                    var relativeUrl = item.QuerySelector("a")?.GetAttribute("href");
-
-                    if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(priceText))
-                        continue;
-
-                    var price = ParsePrice(priceText);
-                    if (price is null)
-                        continue;
-
-                    results.Add(new MaterialPriceDto(
-                        Name: name,
-                        Unit: unit,
-                        Price: price.Value,
-                        Currency: "AZN",
-                        SourceUrl: BuildAbsoluteUrl(relativeUrl)
-                    ));
+                    response = await _httpClient.GetFromJsonAsync<ShopifyProductsResponse>(url, cancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to parse an item on omid.az listing page");
+                    _logger.LogWarning(ex, "Failed to fetch {Url}", url);
+                    break;
                 }
+
+                if (response?.Products is null || response.Products.Count == 0)
+                    break;
+
+                foreach (var product in response.Products)
+                {
+                    foreach (var variant in product.Variants)
+                    {
+                        if (!decimal.TryParse(variant.Price, out var price))
+                            continue;
+
+                        results.Add(new MaterialPriceDto(
+                            Name: variant.Title == "Default Title" ? product.Title : $"{product.Title} - {variant.Title}",
+                            Unit: null,
+                            Price: price,
+                            Currency: "AZN",
+                            SourceUrl: $"https://omid.az/products/{product.Handle}"
+                        ));
+                    }
+                }
+
+                _logger.LogInformation("Fetched page {Page} of {Handle}: {Count} products", page, handle, response.Products.Count);
+
+                if (response.Products.Count < PageLimit)
+                    break; // last page
+
+                page++;
+                await Task.Delay(500, cancellationToken); // be polite, don't hammer their server *_*
             }
-
-            _logger.LogInformation("OmidAz parser scraped {Count} items", results.Count);
-            return results;
         }
 
-        private static decimal? ParsePrice(string raw)
-        {
-            // Strip currency symbols/labels, keep digits, dot, comma
-            var cleaned = new string(raw.Where(c => char.IsDigit(c) || c == '.' || c == ',').ToArray());
-            cleaned = cleaned.Replace(",", ".");
-
-            return decimal.TryParse(cleaned, NumberStyles.Any, CultureInfo.InvariantCulture, out var value)
-                ? value
-                : null;
-        }
-
-        private static string BuildAbsoluteUrl(string? relativeUrl)
-        {
-            if (string.IsNullOrWhiteSpace(relativeUrl))
-                return ListingUrl;
-
-            return relativeUrl.StartsWith("http")
-                ? relativeUrl
-                : $"https://omid.az{relativeUrl}";
-        }
+        _logger.LogInformation("OmidAz parser scraped {Count} total variants", results.Count);
+        return results;
     }
+}
+
+// Shopify's public products.json response shape — internal to Infrastructure, never leaks to Application
+internal class ShopifyProductsResponse
+{
+    [JsonPropertyName("products")]
+    public List<ShopifyProduct> Products { get; set; } = new();
+}
+
+internal class ShopifyProduct
+{
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = default!;
+
+    [JsonPropertyName("handle")]
+    public string Handle { get; set; } = default!;
+
+    [JsonPropertyName("vendor")]
+    public string? Vendor { get; set; }
+
+    [JsonPropertyName("variants")]
+    public List<ShopifyVariant> Variants { get; set; } = new();
+}
+
+internal class ShopifyVariant
+{
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = default!;
+
+    [JsonPropertyName("price")]
+    public string Price { get; set; } = default!;
+
+    [JsonPropertyName("available")]
+    public bool Available { get; set; }
+
+    [JsonPropertyName("sku")]
+    public string? Sku { get; set; }
 }
