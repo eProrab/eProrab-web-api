@@ -9,7 +9,19 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = Directory.GetCurrentDirectory()
+});
+
+// If the container runtime provides a PORT environment variable (e.g. Render),
+// configure the app to listen on that port at runtime.
+var portEnv = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(portEnv))
+{
+    builder.WebHost.UseUrls($"http://*:{portEnv}");
+}
 
 // ---------------------------------------------------------------- services
 
@@ -70,7 +82,9 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
-if (app.Environment.IsDevelopment())
+// Enable Swagger in Development, or when ENABLE_SWAGGER=true is set in the environment.
+var enableSwaggerEnv = Environment.GetEnvironmentVariable("ENABLE_SWAGGER");
+if (app.Environment.IsDevelopment() || string.Equals(enableSwaggerEnv, "true", StringComparison.OrdinalIgnoreCase))
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
@@ -98,6 +112,7 @@ app.MapWorkerCabinetEndpoints();
 app.MapWorkerBrowseEndpoints();
 app.MapJobEndpoints();
 app.MapAdminHiringEndpoints();
+app.MapCalculationEndpoints();
 
 app.MapGet("/", () => Results.Ok(new { service = "eProrab API", status = "running" }))
     .ExcludeFromDescription();

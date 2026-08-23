@@ -41,5 +41,20 @@ public static class AuthEndpoints
                 Results.Ok(await authService.GetCurrentUserAsync(currentUser.UserId!.Value, ct)))
             .WithSummary("Get the authenticated caller's own profile and roles.")
             .RequireAuthorization();
+
+        group.MapPost("/change-password", async (ChangePasswordRequest request, ICurrentUserService currentUser, IAuthService authService, CancellationToken ct) =>
+            {
+                await authService.ChangePasswordAsync(currentUser.UserId!.Value, request, ct);
+                return Results.NoContent();
+            })
+            .WithValidation<ChangePasswordRequest>()
+            .WithSummary("Change the authenticated caller's own password.")
+            .RequireAuthorization();
+
+        group.MapPut("/me", async (UpdateProfileRequest request, ICurrentUserService currentUser, IAuthService authService, CancellationToken ct) =>
+                Results.Ok(await authService.UpdateProfileAsync(currentUser.UserId!.Value, request, ct)))
+            .WithValidation<UpdateProfileRequest>()
+            .WithSummary("Update the authenticated caller's own profile (fullName, phoneNumber).")
+            .RequireAuthorization();
     }
 }

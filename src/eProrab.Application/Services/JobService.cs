@@ -34,14 +34,15 @@ public class JobService(IUnitOfWork uow, IUserDirectoryService userDirectory, IL
 
         q = query.SortBy?.ToLowerInvariant() switch
         {
-            "budget" => query.SortDescending ? q.OrderByDescending(j => j.BudgetMax) : q.OrderBy(j => j.BudgetMax),
-            _ => query.SortDescending ? q.OrderByDescending(j => j.CreatedAtUtc) : q.OrderBy(j => j.CreatedAtUtc)
+            "budget" => query.SortDescending == true ? q.OrderByDescending(j => j.BudgetMax) : q.OrderBy(j => j.BudgetMax),
+            _ => query.SortDescending == true ? q.OrderByDescending(j => j.CreatedAtUtc) : q.OrderBy(j => j.CreatedAtUtc)
         };
 
+        var page = query.Page ?? 1;
         var total = await q.CountAsync(ct);
-        var jobs = await q.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
+        var jobs = await q.Skip((page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
 
-        return PagedResult<JobPostingDto>.Create(await MapJobsAsync(jobs, ct), total, query.Page, query.PageSize);
+        return PagedResult<JobPostingDto>.Create(await MapJobsAsync(jobs, ct), total, page, query.PageSize);
     }
 
     public async Task<JobPostingDto> GetByIdAsync(int id, CancellationToken ct = default)
@@ -132,10 +133,11 @@ public class JobService(IUnitOfWork uow, IUserDirectoryService userDirectory, IL
     {
         var q = BaseJobQuery().Where(j => j.PostedByUserId == postedByUserId).OrderByDescending(j => j.CreatedAtUtc);
 
+        var page = query.Page ?? 1;
         var total = await q.CountAsync(ct);
-        var jobs = await q.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
+        var jobs = await q.Skip((page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
 
-        return PagedResult<JobPostingDto>.Create(await MapJobsAsync(jobs, ct), total, query.Page, query.PageSize);
+        return PagedResult<JobPostingDto>.Create(await MapJobsAsync(jobs, ct), total, page, query.PageSize);
     }
 
     public async Task<IReadOnlyList<JobApplicationDto>> GetApplicantsAsync(int jobPostingId, Guid callerUserId, bool callerIsAdmin, CancellationToken ct = default)
@@ -298,10 +300,11 @@ public class JobService(IUnitOfWork uow, IUserDirectoryService userDirectory, IL
     {
         var q = BaseJobQuery().OrderByDescending(j => j.CreatedAtUtc);
 
+        var page = query.Page ?? 1;
         var total = await q.CountAsync(ct);
-        var jobs = await q.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
+        var jobs = await q.Skip((page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
 
-        return PagedResult<JobPostingDto>.Create(await MapJobsAsync(jobs, ct), total, query.Page, query.PageSize);
+        return PagedResult<JobPostingDto>.Create(await MapJobsAsync(jobs, ct), total, page, query.PageSize);
     }
 
     // ---------------------------------------------------------------- helpers
