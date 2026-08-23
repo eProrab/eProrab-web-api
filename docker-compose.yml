@@ -4,15 +4,15 @@ services:
     container_name: eprorab-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: eprorab
-      POSTGRES_USER: eprorab
-      POSTGRES_PASSWORD: eprorab_dev_password
+      POSTGRES_DB: ${POSTGRES_DB:-eprorab}
+      POSTGRES_USER: ${POSTGRES_USER:-eprorab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eprorab_dev_password}
     ports:
       - "5432:5432"
     volumes:
       - eprorab-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U eprorab -d eprorab" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eprorab} -d ${POSTGRES_DB:-eprorab}" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -27,15 +27,16 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__Default: "Host=localhost;Port=5432;Database=eprorab;Username=eprorab;Password=[PASSWORD]"
-      Jwt__Issuer: "eProrab.API"
-      Jwt__Audience: "eProrab.Client"
-      Jwt__SigningKey: "REPLACE_WITH_A_LONG_RANDOM_SECRET_AT_LEAST_32_CHARS"
-      SeedAdmin__Email: "admin@eprorab.az"
-      SeedAdmin__Password: "ChangeMe123!"
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Default: ${ConnectionStrings__Default:-Host=postgres;Port=5432;Database=eprorab;Username=eprorab;Password=eprorab_dev_password}
+      Jwt__Issuer: ${Jwt__Issuer:-eProrab.API}
+      Jwt__Audience: ${Jwt__Audience:-eProrab.Client}
+      Jwt__SigningKey: ${Jwt__SigningKey:-change_this_jwt_secret_key_minimum_32_characters_long_for_security}
+      SeedAdmin__Email: ${SeedAdmin__Email:-admin@eprorab.az}
+      SeedAdmin__Password: ${SeedAdmin__Password:-ChangeMe123!}
     ports:
       - "8080:8080"
 
 volumes:
   eprorab-postgres-data:
+
