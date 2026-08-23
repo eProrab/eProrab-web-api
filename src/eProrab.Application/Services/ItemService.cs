@@ -31,15 +31,16 @@ public class ItemService(IUnitOfWork uow, ILanguageProvider languageProvider) : 
 
         q = query.SortBy?.ToLowerInvariant() switch
         {
-            "price" => query.SortDescending ? q.OrderByDescending(i => i.Price) : q.OrderBy(i => i.Price),
-            _ => query.SortDescending ? q.OrderByDescending(i => i.CreatedAtUtc) : q.OrderBy(i => i.CreatedAtUtc)
+            "price" => query.SortDescending == true ? q.OrderByDescending(i => i.Price) : q.OrderBy(i => i.Price),
+            _ => query.SortDescending == true ? q.OrderByDescending(i => i.CreatedAtUtc) : q.OrderBy(i => i.CreatedAtUtc)
         };
 
+        var page = query.Page ?? 1;
         var total = await q.CountAsync(ct);
-        var items = await q.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
+        var items = await q.Skip((page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
 
         var lang = languageProvider.Current;
-        return PagedResult<ItemDto>.Create(items.Select(i => ToDto(i, lang)).ToList(), total, query.Page, query.PageSize);
+        return PagedResult<ItemDto>.Create(items.Select(i => ToDto(i, lang)).ToList(), total, page, query.PageSize);
     }
 
     public async Task<ItemDto> GetPublicByIdAsync(int id, CancellationToken ct = default)
@@ -65,15 +66,16 @@ public class ItemService(IUnitOfWork uow, ILanguageProvider languageProvider) : 
 
         q = query.SortBy?.ToLowerInvariant() switch
         {
-            "price" => query.SortDescending ? q.OrderByDescending(i => i.Price) : q.OrderBy(i => i.Price),
-            "sku" => query.SortDescending ? q.OrderByDescending(i => i.Sku) : q.OrderBy(i => i.Sku),
-            _ => query.SortDescending ? q.OrderByDescending(i => i.CreatedAtUtc) : q.OrderBy(i => i.CreatedAtUtc)
+            "price" => query.SortDescending == true ? q.OrderByDescending(i => i.Price) : q.OrderBy(i => i.Price),
+            "sku" => query.SortDescending == true ? q.OrderByDescending(i => i.Sku) : q.OrderBy(i => i.Sku),
+            _ => query.SortDescending == true ? q.OrderByDescending(i => i.CreatedAtUtc) : q.OrderBy(i => i.CreatedAtUtc)
         };
 
+        var page = query.Page ?? 1;
         var total = await q.CountAsync(ct);
-        var items = await q.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
+        var items = await q.Skip((page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
 
-        return PagedResult<ItemAdminDto>.Create(items.Select(ToAdminDto).ToList(), total, query.Page, query.PageSize);
+        return PagedResult<ItemAdminDto>.Create(items.Select(ToAdminDto).ToList(), total, page, query.PageSize);
     }
 
     public async Task<ItemAdminDto> GetByIdForAdminAsync(int id, CancellationToken ct = default)

@@ -9,9 +9,16 @@ public record RegisterRequest(
     string Email,
     string Password,
     string? PhoneNumber,
-    Language PreferredLanguage);
+    Language PreferredLanguage,
+    string? Role = null);
 
 public record LoginRequest(string Email, string Password);
+
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
+public record UpdateProfileRequest(
+    string FullName,
+    string? PhoneNumber);
 
 public record RefreshRequest(string RefreshToken);
 

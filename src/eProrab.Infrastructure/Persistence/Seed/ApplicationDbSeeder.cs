@@ -30,7 +30,7 @@ public static class ApplicationDbSeeder
         await SeedAdminAsync(provider, logger);
         await SeedCategoriesAsync(context);
         await SeedSpecializationsAsync(context);
-        await SeedItemsAsync(context);
+        await ClearItemsAsync(context);
 
         await context.SaveChangesAsync();
     }
@@ -151,48 +151,12 @@ public static class ApplicationDbSeeder
         };
     }
 
-    private static async Task SeedItemsAsync(ApplicationDbContext context)
+    private static async Task ClearItemsAsync(ApplicationDbContext context)
     {
         if (await context.Items.AnyAsync())
         {
-            return;
+            context.Items.RemoveRange(context.Items);
+            await context.SaveChangesAsync();
         }
-
-        var cement = await context.Categories.FirstAsync(c => c.Slug == "cement-concrete");
-        var tools = await context.Categories.FirstAsync(c => c.Slug == "hand-tools");
-
-        context.Items.AddRange(
-            new Item
-            {
-                Sku = "CEM-50KG",
-                CategoryId = cement.Id,
-                Unit = UnitOfMeasure.Bag,
-                Price = 9.50m,
-                StockQuantity = 500,
-                IsActive = true,
-                Translations =
-                [
-                    new ItemTranslation { Language = Language.Az, Name = "Portland sementi 50kg", Description = "Ümumi tikinti işləri üçün M400 sement." },
-                    new ItemTranslation { Language = Language.En, Name = "Portland Cement 50kg", Description = "M400-grade cement for general construction work." },
-                    new ItemTranslation { Language = Language.Ru, Name = "Портландцемент 50кг", Description = "Цемент марки М400 для общестроительных работ." }
-                ]
-            },
-            new Item
-            {
-                Sku = "HMR-STD",
-                CategoryId = tools.Id,
-                Unit = UnitOfMeasure.Piece,
-                Price = 12.90m,
-                StockQuantity = 120,
-                IsActive = true,
-                Translations =
-                [
-                    new ItemTranslation { Language = Language.Az, Name = "Bənna çəkici", Description = "Standart tikinti çəkici, poladdan hazırlanıb." },
-                    new ItemTranslation { Language = Language.En, Name = "Mason's Hammer", Description = "Standard steel construction hammer." },
-                    new ItemTranslation { Language = Language.Ru, Name = "Молоток каменщика", Description = "Стандартный строительный молоток из стали." }
-                ]
-            });
-
-        await context.SaveChangesAsync();
     }
 }

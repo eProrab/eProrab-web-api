@@ -33,14 +33,15 @@ public class CategoryService(IUnitOfWork uow, ILanguageProvider languageProvider
 
         q = query.SortBy?.ToLowerInvariant() switch
         {
-            "slug" => query.SortDescending ? q.OrderByDescending(c => c.Slug) : q.OrderBy(c => c.Slug),
-            _ => query.SortDescending ? q.OrderByDescending(c => c.DisplayOrder) : q.OrderBy(c => c.DisplayOrder)
+            "slug" => query.SortDescending == true ? q.OrderByDescending(c => c.Slug) : q.OrderBy(c => c.Slug),
+            _ => query.SortDescending == true ? q.OrderByDescending(c => c.DisplayOrder) : q.OrderBy(c => c.DisplayOrder)
         };
 
+        var page = query.Page ?? 1;
         var total = await q.CountAsync(ct);
-        var items = await q.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
+        var items = await q.Skip((page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
 
-        return PagedResult<CategoryAdminDto>.Create(items.Select(ToAdminDto).ToList(), total, query.Page, query.PageSize);
+        return PagedResult<CategoryAdminDto>.Create(items.Select(ToAdminDto).ToList(), total, page, query.PageSize);
     }
 
     public async Task<CategoryAdminDto> GetByIdForAdminAsync(int id, CancellationToken ct = default)

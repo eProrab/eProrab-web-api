@@ -45,7 +45,11 @@ public class AuthService(
             throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
         }
 
-        await userManager.AddToRoleAsync(user, Roles.Client);
+        var role = string.Equals(request.Role, Roles.Worker, StringComparison.OrdinalIgnoreCase)
+            ? Roles.Worker
+            : Roles.Client;
+
+        await userManager.AddToRoleAsync(user, role);
 
         return await IssueTokensAsync(user, ct);
     }
@@ -124,6 +128,35 @@ public class AuthService(
         return new CurrentUserDto(
             user.Id, user.FullName, user.Email!, user.PhoneNumber,
             user.PreferredLanguage, roles.ToList(), user.IsActive, hasWorkerProfile);
+    }
+
+    public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+
+        var result = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+    }
+
+    public async Task<CurrentUserDto> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+
+        user.FullName = request.FullName.Trim();
+        user.PhoneNumber = request.PhoneNumber?.Trim();
+
+        var result = await userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+
+        return await GetCurrentUserAsync(userId, ct);
     }
 
     private async Task<AuthResponse> IssueTokensAsync(ApplicationUser user, CancellationToken ct)

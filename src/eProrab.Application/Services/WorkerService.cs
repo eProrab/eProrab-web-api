@@ -28,19 +28,20 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
 
         q = query.SortBy?.ToLowerInvariant() switch
         {
-            "experience" => query.SortDescending ? q.OrderByDescending(w => w.ExperienceYears) : q.OrderBy(w => w.ExperienceYears),
-            "rate" => query.SortDescending ? q.OrderByDescending(w => w.DailyRate) : q.OrderBy(w => w.DailyRate),
-            _ => query.SortDescending ? q.OrderByDescending(w => w.CreatedAtUtc) : q.OrderBy(w => w.CreatedAtUtc)
+            "experience" => query.SortDescending == true ? q.OrderByDescending(w => w.ExperienceYears) : q.OrderBy(w => w.ExperienceYears),
+            "rate" => query.SortDescending == true ? q.OrderByDescending(w => w.DailyRate) : q.OrderBy(w => w.DailyRate),
+            _ => query.SortDescending == true ? q.OrderByDescending(w => w.CreatedAtUtc) : q.OrderBy(w => w.CreatedAtUtc)
         };
 
+        var page = query.Page ?? 1;
         var total = await q.CountAsync(ct);
-        var profiles = await q.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
+        var profiles = await q.Skip((page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
 
         var names = await userDirectory.GetSummariesAsync(profiles.Select(p => p.UserId), ct);
         var lang = languageProvider.Current;
 
         var dtos = profiles.Select(p => ToDto(p, names.GetValueOrDefault(p.UserId)?.FullName ?? "Unknown", lang)).ToList();
-        return PagedResult<WorkerProfileDto>.Create(dtos, total, query.Page, query.PageSize);
+        return PagedResult<WorkerProfileDto>.Create(dtos, total, page, query.PageSize);
     }
 
     public async Task<WorkerProfileDto> GetByIdAsync(int id, CancellationToken ct = default)
@@ -126,9 +127,10 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
     {
         var q = uow.WorkerProfiles.Query().Include(w => w.Specialization).ThenInclude(s => s.Translations).AsQueryable();
 
+        var page = query.Page ?? 1;
         var total = await q.CountAsync(ct);
         var profiles = await q.OrderByDescending(w => w.CreatedAtUtc)
-            .Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
+            .Skip((page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
 
         var names = await userDirectory.GetSummariesAsync(profiles.Select(p => p.UserId), ct);
         var lang = languageProvider.Current;
@@ -142,7 +144,7 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
                 p.ExperienceYears, p.Bio, p.City, p.DailyRate, p.IsAvailableForHire, p.IsVerified, p.CreatedAtUtc);
         }).ToList();
 
-        return PagedResult<WorkerProfileAdminDto>.Create(dtos, total, query.Page, query.PageSize);
+        return PagedResult<WorkerProfileAdminDto>.Create(dtos, total, page, query.PageSize);
     }
 
     public async Task<WorkerProfileAdminDto> SetVerifiedAsync(int id, bool isVerified, CancellationToken ct = default)

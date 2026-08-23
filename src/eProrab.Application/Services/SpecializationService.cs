@@ -33,14 +33,15 @@ public class SpecializationService(IUnitOfWork uow, ILanguageProvider languagePr
 
         q = query.SortBy?.ToLowerInvariant() switch
         {
-            "slug" => query.SortDescending ? q.OrderByDescending(s => s.Slug) : q.OrderBy(s => s.Slug),
-            _ => query.SortDescending ? q.OrderByDescending(s => s.DisplayOrder) : q.OrderBy(s => s.DisplayOrder)
+            "slug" => query.SortDescending == true ? q.OrderByDescending(s => s.Slug) : q.OrderBy(s => s.Slug),
+            _ => query.SortDescending == true ? q.OrderByDescending(s => s.DisplayOrder) : q.OrderBy(s => s.DisplayOrder)
         };
 
+        var page = query.Page ?? 1;
         var total = await q.CountAsync(ct);
-        var items = await q.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
+        var items = await q.Skip((page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
 
-        return PagedResult<SpecializationAdminDto>.Create(items.Select(ToAdminDto).ToList(), total, query.Page, query.PageSize);
+        return PagedResult<SpecializationAdminDto>.Create(items.Select(ToAdminDto).ToList(), total, page, query.PageSize);
     }
 
     public async Task<SpecializationAdminDto> GetByIdForAdminAsync(int id, CancellationToken ct = default)

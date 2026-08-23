@@ -20,6 +20,7 @@ public class UnitOfWork : IUnitOfWork
         JobPostings = new Repository<JobPosting>(context);
         JobApplications = new Repository<JobApplication>(context);
         RefreshTokens = new Repository<RefreshToken>(context);
+        SavedCalculations = new Repository<SavedCalculation>(context);
     }
 
     public IRepository<Category> Categories { get; }
@@ -32,6 +33,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<JobPosting> JobPostings { get; }
     public IRepository<JobApplication> JobApplications { get; }
     public IRepository<RefreshToken> RefreshTokens { get; }
+    public IRepository<SavedCalculation> SavedCalculations { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken ct = default) => _context.SaveChangesAsync(ct);
 }
