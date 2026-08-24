@@ -21,6 +21,7 @@ public class UnitOfWork : IUnitOfWork
         JobApplications = new Repository<JobApplication>(context);
         RefreshTokens = new Repository<RefreshToken>(context);
         SavedCalculations = new Repository<SavedCalculation>(context);
+        DirectMessages = new Repository<DirectMessage>(context);
     }
 
     public IRepository<Category> Categories { get; }
@@ -34,6 +35,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<JobApplication> JobApplications { get; }
     public IRepository<RefreshToken> RefreshTokens { get; }
     public IRepository<SavedCalculation> SavedCalculations { get; }
+    public IRepository<DirectMessage> DirectMessages { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken ct = default) => _context.SaveChangesAsync(ct);
 }

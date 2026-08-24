@@ -47,12 +47,15 @@ public class AuthService(
 
         var role = string.Equals(request.Role, Roles.Worker, StringComparison.OrdinalIgnoreCase)
             ? Roles.Worker
-            : Roles.Client;
+            : string.Equals(request.Role, Roles.Architect, StringComparison.OrdinalIgnoreCase)
+                ? Roles.Architect
+                : Roles.Client;
 
         await userManager.AddToRoleAsync(user, role);
 
         return await IssueTokensAsync(user, ct);
     }
+
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {

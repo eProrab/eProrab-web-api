@@ -26,6 +26,70 @@ public static class ApplicationDbSeeder
 
         await context.Database.MigrateAsync();
 
+        // Ensure newly introduced tables and columns exist in PostgreSQL
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS ""SavedCalculations"" (
+                    ""Id"" serial NOT NULL,
+                    ""UserId"" uuid NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+                    ""Title"" character varying(200) NOT NULL DEFAULT '',
+                    ""PropertyType"" character varying(50) NOT NULL DEFAULT '',
+                    ""StructureAge"" character varying(50) NOT NULL DEFAULT '',
+                    ""RepairStyle"" character varying(50) NOT NULL DEFAULT '',
+                    ""TariffTier"" character varying(50) NOT NULL DEFAULT '',
+                    ""TotalArea"" double precision NOT NULL DEFAULT 0,
+                    ""WallHeight"" double precision NOT NULL DEFAULT 2.8,
+                    ""RoomCount"" integer NOT NULL DEFAULT 0,
+                    ""DoorCount"" integer NOT NULL DEFAULT 0,
+                    ""WindowCount"" integer NOT NULL DEFAULT 0,
+                    ""TotalBudget"" numeric NOT NULL DEFAULT 0,
+                    ""MaterialCost"" numeric NOT NULL DEFAULT 0,
+                    ""LaborCost"" numeric NOT NULL DEFAULT 0,
+                    ""OtherCost"" numeric NOT NULL DEFAULT 0,
+                    ""IncludeRoughMaterials"" boolean NOT NULL DEFAULT true,
+                    ""RoomsJson"" text NOT NULL DEFAULT '[]',
+                    ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                    ""UpdatedAtUtc"" timestamp with time zone,
+                    ""IsDeleted"" boolean NOT NULL DEFAULT false,
+                    CONSTRAINT ""PK_SavedCalculations"" PRIMARY KEY (""Id"")
+                );
+                ALTER TABLE ""SavedCalculations"" ADD COLUMN IF NOT EXISTS ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now();
+                ALTER TABLE ""SavedCalculations"" ADD COLUMN IF NOT EXISTS ""UpdatedAtUtc"" timestamp with time zone;
+                ALTER TABLE ""SavedCalculations"" ADD COLUMN IF NOT EXISTS ""WallHeight"" double precision NOT NULL DEFAULT 2.8;
+                ALTER TABLE ""SavedCalculations"" ADD COLUMN IF NOT EXISTS ""IncludeRoughMaterials"" boolean NOT NULL DEFAULT true;
+                ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""WorkerType"" integer NOT NULL DEFAULT 0;
+                ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""CompanyName"" character varying(200);
+                ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""Voen"" character varying(50);
+                ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""TeamSize"" integer;
+
+                CREATE TABLE IF NOT EXISTS ""DirectMessages"" (
+                    ""Id"" serial NOT NULL,
+                    ""SenderId"" uuid NOT NULL,
+                    ""RecipientId"" uuid NOT NULL,
+                    ""SenderName"" character varying(200) NOT NULL DEFAULT '',
+                    ""RecipientName"" character varying(200) NOT NULL DEFAULT '',
+                    ""SenderRole"" character varying(50) NOT NULL DEFAULT '',
+                    ""RecipientRole"" character varying(50) NOT NULL DEFAULT '',
+                    ""Text"" text NOT NULL DEFAULT '',
+                    ""AttachmentsJson"" text,
+                    ""IsRead"" boolean NOT NULL DEFAULT false,
+                    ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                    ""UpdatedAtUtc"" timestamp with time zone,
+                    ""IsDeleted"" boolean NOT NULL DEFAULT false,
+                    CONSTRAINT ""PK_DirectMessages"" PRIMARY KEY (""Id"")
+                );
+                CREATE INDEX IF NOT EXISTS ""IX_DirectMessages_SenderId"" ON ""DirectMessages""(""SenderId"");
+                CREATE INDEX IF NOT EXISTS ""IX_DirectMessages_RecipientId"" ON ""DirectMessages""(""RecipientId"");
+
+            ");
+
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Schema update script skipped or encountered non-fatal notice.");
+        }
+
         await SeedRolesAsync(provider);
         await SeedAdminAsync(provider, logger);
         await SeedCategoriesAsync(context);
@@ -33,6 +97,7 @@ public static class ApplicationDbSeeder
         await ClearItemsAsync(context);
 
         await context.SaveChangesAsync();
+
     }
 
     private static async Task SeedRolesAsync(IServiceProvider provider)

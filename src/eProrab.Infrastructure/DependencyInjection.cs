@@ -48,6 +48,8 @@ public static class DependencyInjection
         services.AddScoped<IUserDirectoryService, UserDirectoryService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IChatService, ChatService>();
+
 
         return services;
     }

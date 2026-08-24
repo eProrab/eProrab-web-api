@@ -19,5 +19,9 @@ public static class Roles
     /// <summary>Job-seeking tradesperson (mason, electrician, painter, etc.) with a worker cabinet.</summary>
     public const string Worker = "Worker";
 
-    public static readonly string[] All = [Admin, Manager, Client, Worker];
+    /// <summary>Architect / Designer performing author supervision and project design.</summary>
+    public const string Architect = "Architect";
+
+    public static readonly string[] All = [Admin, Manager, Client, Worker, Architect];
 }
+
