@@ -11,6 +11,7 @@ public class SavedCalculation : BaseEntity
     public string RepairStyle { get; set; } = string.Empty;
     public string TariffTier { get; set; } = string.Empty;
     public double TotalArea { get; set; }
+    public double WallHeight { get; set; } = 2.8;
     public int RoomCount { get; set; }
     public int DoorCount { get; set; }
     public int WindowCount { get; set; }

@@ -1,17 +1,24 @@
 using eProrab.Domain.Common;
+using eProrab.Domain.Enums;
 
 namespace eProrab.Domain.Entities;
 
 /// <summary>
 /// The "worker cabinet" data: a 1-to-1 extension of a Worker-role user with
-/// trade info used for job matching. Free-text fields (Bio) are stored as the
-/// worker wrote them — only the curated <see cref="Specialization"/> taxonomy
-/// is translated.
+/// trade info used for job matching. Supports both Individual Masters and Companies/Contractors.
 /// </summary>
 public class WorkerProfile : BaseEntity
 {
     /// <summary>FK to the Identity user (Infrastructure layer); intentionally not a navigation property.</summary>
     public Guid UserId { get; set; }
+
+    public WorkerType WorkerType { get; set; } = WorkerType.Individual;
+
+    public string? CompanyName { get; set; }
+
+    public string? Voen { get; set; }
+
+    public int? TeamSize { get; set; }
 
     public int SpecializationId { get; set; }
 
@@ -33,3 +40,4 @@ public class WorkerProfile : BaseEntity
 
     public ICollection<JobApplication> Applications { get; set; } = [];
 }
+

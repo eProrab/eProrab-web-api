@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
+// Load .env file if present (e.g. local development)
+LoadDotEnv();
+
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
@@ -113,6 +116,8 @@ app.MapWorkerBrowseEndpoints();
 app.MapJobEndpoints();
 app.MapAdminHiringEndpoints();
 app.MapCalculationEndpoints();
+app.MapChatEndpoints();
+
 
 app.MapGet("/", () => Results.Ok(new { service = "eProrab API", status = "running" }))
     .ExcludeFromDescription();
@@ -134,6 +139,43 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+static void LoadDotEnv()
+{
+    var currentDir = Directory.GetCurrentDirectory();
+    var possiblePaths = new[]
+    {
+        Path.Combine(currentDir, ".env"),
+        Path.Combine(currentDir, "..", ".env"),
+        Path.Combine(currentDir, "..", "..", ".env")
+    };
+
+    foreach (var path in possiblePaths)
+    {
+        if (File.Exists(path))
+        {
+            foreach (var line in File.ReadAllLines(path))
+            {
+                var trimmed = line.Trim();
+                if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#'))
+                    continue;
+
+                var separatorIndex = trimmed.IndexOf('=');
+                if (separatorIndex <= 0)
+                    continue;
+
+                var key = trimmed[..separatorIndex].Trim();
+                var value = trimmed[(separatorIndex + 1)..].Trim();
+
+                if (Environment.GetEnvironmentVariable(key) is null)
+                {
+                    Environment.SetEnvironmentVariable(key, value);
+                }
+            }
+            break;
+        }
+    }
+}
 
 // Exposed for WebApplicationFactory-based integration tests.
 public partial class Program;

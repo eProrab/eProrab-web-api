@@ -20,6 +20,7 @@ public interface IUnitOfWork
     IRepository<JobApplication> JobApplications { get; }
     IRepository<RefreshToken> RefreshTokens { get; }
     IRepository<SavedCalculation> SavedCalculations { get; }
+    IRepository<DirectMessage> DirectMessages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

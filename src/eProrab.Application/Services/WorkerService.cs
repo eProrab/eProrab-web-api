@@ -3,18 +3,24 @@ using eProrab.Application.DTOs.Workers;
 using eProrab.Application.Interfaces;
 using eProrab.Application.Localization;
 using eProrab.Domain.Entities;
+using eProrab.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace eProrab.Application.Services;
 
 public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory, ILanguageProvider languageProvider) : IWorkerService
 {
-    public async Task<PagedResult<WorkerProfileDto>> BrowseAsync(PaginationQuery query, int? specializationId, string? city, CancellationToken ct = default)
+    public async Task<PagedResult<WorkerProfileDto>> BrowseAsync(PaginationQuery query, int? specializationId, string? city, WorkerType? workerType = null, CancellationToken ct = default)
     {
         var q = uow.WorkerProfiles.Query()
             .Include(w => w.Specialization).ThenInclude(s => s.Translations)
             .Where(w => w.IsAvailableForHire)
             .AsQueryable();
+
+        if (workerType.HasValue)
+        {
+            q = q.Where(w => w.WorkerType == workerType.Value);
+        }
 
         if (specializationId.HasValue)
         {
@@ -84,6 +90,10 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
         var profile = new WorkerProfile
         {
             UserId = userId,
+            WorkerType = request.WorkerType,
+            CompanyName = request.CompanyName,
+            Voen = request.Voen,
+            TeamSize = request.TeamSize,
             SpecializationId = request.SpecializationId,
             ExperienceYears = request.ExperienceYears,
             Bio = request.Bio,
@@ -109,6 +119,10 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
             throw new NotFoundException("Specialization", request.SpecializationId);
         }
 
+        profile.WorkerType = request.WorkerType;
+        profile.CompanyName = request.CompanyName;
+        profile.Voen = request.Voen;
+        profile.TeamSize = request.TeamSize;
         profile.SpecializationId = request.SpecializationId;
         profile.ExperienceYears = request.ExperienceYears;
         profile.Bio = request.Bio;
@@ -123,9 +137,14 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
         return (await GetOwnProfileAsync(userId, ct))!;
     }
 
-    public async Task<PagedResult<WorkerProfileAdminDto>> GetPagedForAdminAsync(PaginationQuery query, CancellationToken ct = default)
+    public async Task<PagedResult<WorkerProfileAdminDto>> GetPagedForAdminAsync(PaginationQuery query, WorkerType? workerType = null, CancellationToken ct = default)
     {
         var q = uow.WorkerProfiles.Query().Include(w => w.Specialization).ThenInclude(s => s.Translations).AsQueryable();
+
+        if (workerType.HasValue)
+        {
+            q = q.Where(w => w.WorkerType == workerType.Value);
+        }
 
         var page = query.Page ?? 1;
         var total = await q.CountAsync(ct);
@@ -140,6 +159,7 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
             var summary = names.GetValueOrDefault(p.UserId);
             return new WorkerProfileAdminDto(
                 p.Id, p.UserId, summary?.FullName ?? "Unknown", summary?.Email ?? "", summary?.PhoneNumber,
+                p.WorkerType, p.CompanyName, p.Voen, p.TeamSize,
                 p.SpecializationId, SpecializationService.ResolveName(p.Specialization.Translations, lang),
                 p.ExperienceYears, p.Bio, p.City, p.DailyRate, p.IsAvailableForHire, p.IsVerified, p.CreatedAtUtc);
         }).ToList();
@@ -162,6 +182,7 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
         var lang = languageProvider.Current;
         return new WorkerProfileAdminDto(
             profile.Id, profile.UserId, summary?.FullName ?? "Unknown", summary?.Email ?? "", summary?.PhoneNumber,
+            profile.WorkerType, profile.CompanyName, profile.Voen, profile.TeamSize,
             profile.SpecializationId, SpecializationService.ResolveName(profile.Specialization.Translations, lang),
             profile.ExperienceYears, profile.Bio, profile.City, profile.DailyRate,
             profile.IsAvailableForHire, profile.IsVerified, profile.CreatedAtUtc);
@@ -177,7 +198,8 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
     }
 
     private static WorkerProfileDto ToDto(WorkerProfile p, string fullName, Domain.Enums.Language language) => new(
-        p.Id, p.UserId, fullName, p.SpecializationId,
+        p.Id, p.UserId, fullName, p.WorkerType, p.CompanyName, p.Voen, p.TeamSize, p.SpecializationId,
         SpecializationService.ResolveName(p.Specialization.Translations, language),
         p.ExperienceYears, p.Bio, p.City, p.DailyRate, p.IsAvailableForHire, p.IsVerified);
 }
+

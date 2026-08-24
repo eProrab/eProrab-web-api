@@ -11,6 +11,8 @@ public class WorkerProfileConfiguration : IEntityTypeConfiguration<WorkerProfile
         // One worker profile per user account.
         builder.HasIndex(w => w.UserId).IsUnique();
 
+        builder.Property(w => w.CompanyName).HasMaxLength(200);
+        builder.Property(w => w.Voen).HasMaxLength(50);
         builder.Property(w => w.Bio).HasMaxLength(2000);
         builder.Property(w => w.City).HasMaxLength(100);
         builder.Property(w => w.DailyRate).HasPrecision(10, 2);
@@ -21,3 +23,4 @@ public class WorkerProfileConfiguration : IEntityTypeConfiguration<WorkerProfile
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+

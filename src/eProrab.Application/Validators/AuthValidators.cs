@@ -14,10 +14,14 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .Matches("[0-9]").WithMessage("Password must contain at least one digit.");
         RuleFor(x => x.PhoneNumber).MaximumLength(30);
         RuleFor(x => x.PreferredLanguage).IsInEnum();
-        RuleFor(x => x.Role).Must(r => string.IsNullOrEmpty(r) || r == eProrab.Domain.Constants.Roles.Client || r == eProrab.Domain.Constants.Roles.Worker)
-            .WithMessage("Only 'Client' or 'Worker' roles are allowed during registration.");
+        RuleFor(x => x.Role).Must(r => string.IsNullOrEmpty(r) ||
+                                       r == eProrab.Domain.Constants.Roles.Client ||
+                                       r == eProrab.Domain.Constants.Roles.Worker ||
+                                       r == eProrab.Domain.Constants.Roles.Architect)
+            .WithMessage("Only 'Client', 'Worker' or 'Architect' roles are allowed during registration.");
     }
 }
+
 
 public class LoginRequestValidator : AbstractValidator<LoginRequest>
 {
