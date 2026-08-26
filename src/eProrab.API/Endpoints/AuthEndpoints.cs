@@ -56,5 +56,35 @@ public static class AuthEndpoints
             .WithValidation<UpdateProfileRequest>()
             .WithSummary("Update the authenticated caller's own profile (fullName, phoneNumber).")
             .RequireAuthorization();
+
+        group.MapPost("/google-login", async (OAuthLoginRequest request, IAuthService authService, CancellationToken ct) =>
+                Results.Ok(await authService.GoogleLoginAsync(request, ct)))
+            .WithValidation<OAuthLoginRequest>()
+            .WithSummary("Sign in or sign up with Google OAuth. Auto-creates account on first login.")
+            .AllowAnonymous();
+
+        group.MapPost("/facebook-login", async (OAuthLoginRequest request, IAuthService authService, CancellationToken ct) =>
+                Results.Ok(await authService.FacebookLoginAsync(request, ct)))
+            .WithValidation<OAuthLoginRequest>()
+            .WithSummary("Sign in or sign up with Facebook OAuth. Auto-creates account on first login.")
+            .AllowAnonymous();
+
+        group.MapPost("/link-google", async (LinkOAuthProviderRequest request, ICurrentUserService currentUser, IAuthService authService, CancellationToken ct) =>
+            {
+                await authService.LinkGoogleAsync(currentUser.UserId!.Value, request, ct);
+                return Results.NoContent();
+            })
+            .WithValidation<LinkOAuthProviderRequest>()
+            .WithSummary("Link a Google account to the authenticated user's account.")
+            .RequireAuthorization();
+
+        group.MapPost("/link-facebook", async (LinkOAuthProviderRequest request, ICurrentUserService currentUser, IAuthService authService, CancellationToken ct) =>
+            {
+                await authService.LinkFacebookAsync(currentUser.UserId!.Value, request, ct);
+                return Results.NoContent();
+            })
+            .WithValidation<LinkOAuthProviderRequest>()
+            .WithSummary("Link a Facebook account to the authenticated user's account.")
+            .RequireAuthorization();
     }
 }

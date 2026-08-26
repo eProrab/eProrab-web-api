@@ -37,3 +37,19 @@ public record AuthResponse(
     DateTime AccessTokenExpiresAtUtc,
     string RefreshToken,
     CurrentUserDto User);
+
+/// <summary>
+/// OAuth login request. The IdToken is obtained from the OAuth provider (Google/Facebook)
+/// and sent by the frontend to the backend for validation and user authentication/creation.
+/// </summary>
+public record OAuthLoginRequest(
+    string IdToken,
+    Language PreferredLanguage = Language.Az,
+    string? PhoneNumber = null);
+
+/// <summary>
+/// Link OAuth provider account to existing user account.
+/// User must be authenticated; the IdToken is from the OAuth provider.
+/// </summary>
+public record LinkOAuthProviderRequest(
+    string IdToken);

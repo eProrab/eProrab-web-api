@@ -18,4 +18,13 @@ public class ApplicationUser : IdentityUser<Guid>
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    // OAuth provider associations
+    public string? GoogleId { get; set; }
+
+    public string? FacebookId { get; set; }
+
+    public DateTime? GoogleLinkedAtUtc { get; set; }
+
+    public DateTime? FacebookLinkedAtUtc { get; set; }
 }

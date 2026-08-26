@@ -17,6 +17,7 @@ public class AuthService(
     IUnitOfWork uow,
     ITokenService tokenService,
     ILanguageProvider languageProvider,
+    IOAuthTokenValidator oauthValidator,
     IOptions<JwtOptions> jwtOptions) : IAuthService
 {
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
@@ -177,5 +178,179 @@ public class AuthService(
         await uow.SaveChangesAsync(ct);
 
         return new AuthResponse(access.Token, access.ExpiresAtUtc, refreshTokenValue, await GetCurrentUserAsync(user.Id, ct));
+    }
+
+    public async Task<AuthResponse> GoogleLoginAsync(OAuthLoginRequest request, CancellationToken ct = default)
+    {
+        var (googleId, email, fullName) = await oauthValidator.ValidateGoogleTokenAsync(request.IdToken, ct);
+
+        // Check if user exists with this Google ID
+        var user = await userManager.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId, ct);
+
+        if (user is not null)
+        {
+            // User exists with this Google ID - just log them in
+            if (!user.IsActive)
+            {
+                throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.AccountDeactivated, languageProvider.Current));
+            }
+
+            return await IssueTokensAsync(user, ct);
+        }
+
+        // Check if email already exists
+        var existingByEmail = await userManager.FindByEmailAsync(email);
+        if (existingByEmail is not null)
+        {
+            // Email exists but not linked to Google - user should link or register differently
+            throw new ConflictException("An account with this email already exists. Please sign in with your password or link this Google account to your existing account.");
+        }
+
+        // Auto-create new user with Google credentials
+        user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            FullName = fullName,
+            PhoneNumber = request.PhoneNumber,
+            PreferredLanguage = request.PreferredLanguage,
+            GoogleId = googleId,
+            GoogleLinkedAtUtc = DateTime.UtcNow,
+            IsActive = true,
+            EmailConfirmed = true // OAuth emails are pre-verified
+        };
+
+        var result = await userManager.CreateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+
+        // Assign Client role by default
+        await userManager.AddToRoleAsync(user, Roles.Client);
+
+        return await IssueTokensAsync(user, ct);
+    }
+
+    public async Task<AuthResponse> FacebookLoginAsync(OAuthLoginRequest request, CancellationToken ct = default)
+    {
+        var (facebookId, email, fullName) = await oauthValidator.ValidateFacebookTokenAsync(request.IdToken, ct);
+
+        // Check if user exists with this Facebook ID
+        var user = await userManager.Users.FirstOrDefaultAsync(u => u.FacebookId == facebookId, ct);
+
+        if (user is not null)
+        {
+            // User exists with this Facebook ID - just log them in
+            if (!user.IsActive)
+            {
+                throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.AccountDeactivated, languageProvider.Current));
+            }
+
+            return await IssueTokensAsync(user, ct);
+        }
+
+        // Check if email already exists
+        var existingByEmail = await userManager.FindByEmailAsync(email);
+        if (existingByEmail is not null)
+        {
+            // Email exists but not linked to Facebook - user should link or register differently
+            throw new ConflictException("An account with this email already exists. Please sign in with your password or link this Facebook account to your existing account.");
+        }
+
+        // Auto-create new user with Facebook credentials
+        user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            FullName = fullName,
+            PhoneNumber = request.PhoneNumber,
+            PreferredLanguage = request.PreferredLanguage,
+            FacebookId = facebookId,
+            FacebookLinkedAtUtc = DateTime.UtcNow,
+            IsActive = true,
+            EmailConfirmed = true // OAuth emails are pre-verified
+        };
+
+        var result = await userManager.CreateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+
+        // Assign Client role by default
+        await userManager.AddToRoleAsync(user, Roles.Client);
+
+        return await IssueTokensAsync(user, ct);
+    }
+
+    public async Task LinkGoogleAsync(Guid userId, LinkOAuthProviderRequest request, CancellationToken ct = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+
+        if (!user.IsActive)
+        {
+            throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.AccountDeactivated, languageProvider.Current));
+        }
+
+        var (googleId, _, _) = await oauthValidator.ValidateGoogleTokenAsync(request.IdToken, ct);
+
+        // Check if this Google ID is already linked to another account
+        var existing = await userManager.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId && u.Id != userId, ct);
+        if (existing is not null)
+        {
+            throw new ConflictException("This Google account is already linked to another user account.");
+        }
+
+        // Check if this user already has a Google link
+        if (user.GoogleId is not null)
+        {
+            throw new ConflictException("Your account is already linked to a Google account.");
+        }
+
+        user.GoogleId = googleId;
+        user.GoogleLinkedAtUtc = DateTime.UtcNow;
+
+        var result = await userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+    }
+
+    public async Task LinkFacebookAsync(Guid userId, LinkOAuthProviderRequest request, CancellationToken ct = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+
+        if (!user.IsActive)
+        {
+            throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.AccountDeactivated, languageProvider.Current));
+        }
+
+        var (facebookId, _, _) = await oauthValidator.ValidateFacebookTokenAsync(request.IdToken, ct);
+
+        // Check if this Facebook ID is already linked to another account
+        var existing = await userManager.Users.FirstOrDefaultAsync(u => u.FacebookId == facebookId && u.Id != userId, ct);
+        if (existing is not null)
+        {
+            throw new ConflictException("This Facebook account is already linked to another user account.");
+        }
+
+        // Check if this user already has a Facebook link
+        if (user.FacebookId is not null)
+        {
+            throw new ConflictException("Your account is already linked to a Facebook account.");
+        }
+
+        user.FacebookId = facebookId;
+        user.FacebookLinkedAtUtc = DateTime.UtcNow;
+
+        var result = await userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
     }
 }
