@@ -34,6 +34,10 @@ services:
       Jwt__SigningKey: ${Jwt__SigningKey:-change_this_jwt_secret_key_minimum_32_characters_long_for_security}
       SeedAdmin__Email: ${SeedAdmin__Email:-admin@eprorab.az}
       SeedAdmin__Password: ${SeedAdmin__Password:-ChangeMe123!}
+      OAuth__Google__ClientId: ${OAuth__Google__ClientId:-}
+      OAuth__Google__ClientSecret: ${OAuth__Google__ClientSecret:-}
+      OAuth__Facebook__AppId: ${OAuth__Facebook__AppId:-}
+      OAuth__Facebook__AppSecret: ${OAuth__Facebook__AppSecret:-}
     ports:
       - "8080:8080"
 
