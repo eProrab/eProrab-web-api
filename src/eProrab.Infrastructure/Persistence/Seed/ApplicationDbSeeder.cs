@@ -82,6 +82,13 @@ public static class ApplicationDbSeeder
                 CREATE INDEX IF NOT EXISTS ""IX_DirectMessages_SenderId"" ON ""DirectMessages""(""SenderId"");
                 CREATE INDEX IF NOT EXISTS ""IX_DirectMessages_RecipientId"" ON ""DirectMessages""(""RecipientId"");
 
+                -- OAuth Columns on AspNetUsers
+                ALTER TABLE ""AspNetUsers"" ADD COLUMN IF NOT EXISTS ""GoogleId"" character varying(100);
+                ALTER TABLE ""AspNetUsers"" ADD COLUMN IF NOT EXISTS ""FacebookId"" character varying(100);
+                ALTER TABLE ""AspNetUsers"" ADD COLUMN IF NOT EXISTS ""GoogleLinkedAtUtc"" timestamp with time zone;
+                ALTER TABLE ""AspNetUsers"" ADD COLUMN IF NOT EXISTS ""FacebookLinkedAtUtc"" timestamp with time zone;
+                CREATE INDEX IF NOT EXISTS ""IX_AspNetUsers_GoogleId"" ON ""AspNetUsers""(""GoogleId"");
+                CREATE INDEX IF NOT EXISTS ""IX_AspNetUsers_FacebookId"" ON ""AspNetUsers""(""FacebookId"");
             ");
 
         }
