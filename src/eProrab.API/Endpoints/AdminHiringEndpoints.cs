@@ -14,8 +14,8 @@ public static class AdminHiringEndpoints
             .WithTags("Admin - Workers")
             .RequireAuthorization(AuthorizationPolicies.AdminOnly);
 
-        workers.MapGet("/", async ([AsParameters] PaginationQuery query, WorkerType? workerType, IWorkerService service, CancellationToken ct) =>
-            Results.Ok(await service.GetPagedForAdminAsync(query, workerType, ct)));
+        workers.MapGet("/", async ([AsParameters] PaginationQuery query, WorkerType? workerType, bool? isArchitectTeamMember, IWorkerService service, CancellationToken ct) =>
+            Results.Ok(await service.GetPagedForAdminAsync(query, workerType, isArchitectTeamMember, ct)));
 
         workers.MapPatch("/{id:int}/verify", async (int id, bool isVerified, IWorkerService service, CancellationToken ct) =>
                 Results.Ok(await service.SetVerifiedAsync(id, isVerified, ct)))

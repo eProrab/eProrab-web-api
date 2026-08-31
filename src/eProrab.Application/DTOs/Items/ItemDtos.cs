@@ -16,6 +16,7 @@ public record ItemDto(
     decimal? StockQuantity,
     string? ImageUrl,
     bool IsActive,
+    bool IsFinishMaterial,
     string Name,
     string? Description);
 
@@ -29,6 +30,7 @@ public record ItemAdminDto(
     decimal? StockQuantity,
     string? ImageUrl,
     bool IsActive,
+    bool IsFinishMaterial,
     DateTime CreatedAtUtc,
     DateTime? UpdatedAtUtc,
     IReadOnlyList<ItemTranslationDto> Translations);
@@ -41,6 +43,7 @@ public record CreateItemRequest(
     decimal? StockQuantity,
     string? ImageUrl,
     bool IsActive,
+    bool IsFinishMaterial,
     IReadOnlyList<ItemTranslationDto> Translations);
 
 public record UpdateItemRequest(
@@ -50,4 +53,5 @@ public record UpdateItemRequest(
     decimal? StockQuantity,
     string? ImageUrl,
     bool IsActive,
+    bool IsFinishMaterial,
     IReadOnlyList<ItemTranslationDto> Translations);

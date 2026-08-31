@@ -18,7 +18,10 @@ public record WorkerProfileDto(
     string? City,
     decimal? DailyRate,
     bool IsAvailableForHire,
-    bool IsVerified);
+    bool IsVerified,
+    bool IsArchitectTeamMember = false,
+    string? ArchitectName = null,
+    string? ArchitectStudio = null);
 
 /// <summary>Admin view — adds contact info hidden from public browsing.</summary>
 public record WorkerProfileAdminDto(
@@ -39,7 +42,10 @@ public record WorkerProfileAdminDto(
     decimal? DailyRate,
     bool IsAvailableForHire,
     bool IsVerified,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    bool IsArchitectTeamMember = false,
+    string? ArchitectName = null,
+    string? ArchitectStudio = null);
 
 /// <summary>Worker-cabinet self-service create/update of the caller's own profile.</summary>
 public record UpsertWorkerProfileRequest(
@@ -52,5 +58,9 @@ public record UpsertWorkerProfileRequest(
     string? Bio,
     string? City,
     decimal? DailyRate,
-    bool IsAvailableForHire);
+    bool IsAvailableForHire,
+    bool IsArchitectTeamMember = false,
+    string? ArchitectName = null,
+    string? ArchitectStudio = null);
+
 

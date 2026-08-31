@@ -38,6 +38,13 @@ public class WorkerProfile : BaseEntity
     /// <summary>Set by an Admin once the worker's identity/skills have been checked.</summary>
     public bool IsVerified { get; set; }
 
+    /// <summary>Indicates if the worker belongs to an Architect/Designer's trusted brigade or is an independent freelancer.</summary>
+    public bool IsArchitectTeamMember { get; set; }
+
+    public string? ArchitectName { get; set; }
+
+    public string? ArchitectStudio { get; set; }
+
     public ICollection<JobApplication> Applications { get; set; } = [];
 }
 

@@ -61,6 +61,9 @@ public static class ApplicationDbSeeder
             @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""CompanyName"" character varying(200);",
             @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""Voen"" character varying(50);",
             @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""TeamSize"" integer;",
+            @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""IsArchitectTeamMember"" boolean NOT NULL DEFAULT false;",
+            @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""ArchitectName"" character varying(200);",
+            @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""ArchitectStudio"" character varying(200);",
             @"CREATE TABLE IF NOT EXISTS ""DirectMessages"" (
                 ""Id"" serial NOT NULL,
                 ""SenderId"" uuid NOT NULL,
