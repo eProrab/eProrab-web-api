@@ -11,9 +11,9 @@ public static class WorkerBrowseEndpoints
     {
         var group = app.MapGroup("/api/workers").WithTags("Workers (Browse)");
 
-        group.MapGet("/", async ([AsParameters] PaginationQuery query, int? specializationId, string? city, WorkerType? workerType, IWorkerService service, CancellationToken ct) =>
-                Results.Ok(await service.BrowseAsync(query, specializationId, city, workerType, ct)))
-            .WithSummary("Browse workers available for hire, optionally filtered by specialization/city/workerType.")
+        group.MapGet("/", async ([AsParameters] PaginationQuery query, int? specializationId, string? city, WorkerType? workerType, bool? isArchitectTeamMember, IWorkerService service, CancellationToken ct) =>
+                Results.Ok(await service.BrowseAsync(query, specializationId, city, workerType, isArchitectTeamMember, ct)))
+            .WithSummary("Browse workers available for hire, optionally filtered by specialization/city/workerType/isArchitectTeamMember.")
             .AllowAnonymous();
 
         group.MapGet("/{id:int}", async (int id, IWorkerService service, CancellationToken ct) =>

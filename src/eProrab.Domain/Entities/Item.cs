@@ -28,5 +28,11 @@ public class Item : BaseEntity
 
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// True for finish / overlay materials (paint, wallpaper, tiles, skirting …).
+    /// False (default) for rough / structural materials (cement, brick, sand …).
+    /// </summary>
+    public bool IsFinishMaterial { get; set; } = false;
+
     public ICollection<ItemTranslation> Translations { get; set; } = [];
 }

@@ -10,7 +10,7 @@ namespace eProrab.Application.Services;
 
 public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory, ILanguageProvider languageProvider) : IWorkerService
 {
-    public async Task<PagedResult<WorkerProfileDto>> BrowseAsync(PaginationQuery query, int? specializationId, string? city, WorkerType? workerType = null, CancellationToken ct = default)
+    public async Task<PagedResult<WorkerProfileDto>> BrowseAsync(PaginationQuery query, int? specializationId, string? city, WorkerType? workerType = null, bool? isArchitectTeamMember = null, CancellationToken ct = default)
     {
         var q = uow.WorkerProfiles.Query()
             .Include(w => w.Specialization).ThenInclude(s => s.Translations)
@@ -20,6 +20,11 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
         if (workerType.HasValue)
         {
             q = q.Where(w => w.WorkerType == workerType.Value);
+        }
+
+        if (isArchitectTeamMember.HasValue)
+        {
+            q = q.Where(w => w.IsArchitectTeamMember == isArchitectTeamMember.Value);
         }
 
         if (specializationId.HasValue)
@@ -99,7 +104,10 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
             Bio = request.Bio,
             City = request.City,
             DailyRate = request.DailyRate,
-            IsAvailableForHire = request.IsAvailableForHire
+            IsAvailableForHire = request.IsAvailableForHire,
+            IsArchitectTeamMember = request.IsArchitectTeamMember,
+            ArchitectName = request.ArchitectName,
+            ArchitectStudio = request.ArchitectStudio
         };
 
         await uow.WorkerProfiles.AddAsync(profile, ct);
@@ -129,6 +137,9 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
         profile.City = request.City;
         profile.DailyRate = request.DailyRate;
         profile.IsAvailableForHire = request.IsAvailableForHire;
+        profile.IsArchitectTeamMember = request.IsArchitectTeamMember;
+        profile.ArchitectName = request.ArchitectName;
+        profile.ArchitectStudio = request.ArchitectStudio;
         profile.UpdatedAtUtc = DateTime.UtcNow;
 
         uow.WorkerProfiles.Update(profile);
@@ -137,13 +148,18 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
         return (await GetOwnProfileAsync(userId, ct))!;
     }
 
-    public async Task<PagedResult<WorkerProfileAdminDto>> GetPagedForAdminAsync(PaginationQuery query, WorkerType? workerType = null, CancellationToken ct = default)
+    public async Task<PagedResult<WorkerProfileAdminDto>> GetPagedForAdminAsync(PaginationQuery query, WorkerType? workerType = null, bool? isArchitectTeamMember = null, CancellationToken ct = default)
     {
         var q = uow.WorkerProfiles.Query().Include(w => w.Specialization).ThenInclude(s => s.Translations).AsQueryable();
 
         if (workerType.HasValue)
         {
             q = q.Where(w => w.WorkerType == workerType.Value);
+        }
+
+        if (isArchitectTeamMember.HasValue)
+        {
+            q = q.Where(w => w.IsArchitectTeamMember == isArchitectTeamMember.Value);
         }
 
         var page = query.Page ?? 1;
@@ -161,7 +177,8 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
                 p.Id, p.UserId, summary?.FullName ?? "Unknown", summary?.Email ?? "", summary?.PhoneNumber,
                 p.WorkerType, p.CompanyName, p.Voen, p.TeamSize,
                 p.SpecializationId, SpecializationService.ResolveName(p.Specialization.Translations, lang),
-                p.ExperienceYears, p.Bio, p.City, p.DailyRate, p.IsAvailableForHire, p.IsVerified, p.CreatedAtUtc);
+                p.ExperienceYears, p.Bio, p.City, p.DailyRate, p.IsAvailableForHire, p.IsVerified, p.CreatedAtUtc,
+                p.IsArchitectTeamMember, p.ArchitectName, p.ArchitectStudio);
         }).ToList();
 
         return PagedResult<WorkerProfileAdminDto>.Create(dtos, total, page, query.PageSize);
@@ -185,7 +202,8 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
             profile.WorkerType, profile.CompanyName, profile.Voen, profile.TeamSize,
             profile.SpecializationId, SpecializationService.ResolveName(profile.Specialization.Translations, lang),
             profile.ExperienceYears, profile.Bio, profile.City, profile.DailyRate,
-            profile.IsAvailableForHire, profile.IsVerified, profile.CreatedAtUtc);
+            profile.IsAvailableForHire, profile.IsVerified, profile.CreatedAtUtc,
+            profile.IsArchitectTeamMember, profile.ArchitectName, profile.ArchitectStudio);
     }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
@@ -200,6 +218,7 @@ public class WorkerService(IUnitOfWork uow, IUserDirectoryService userDirectory,
     private static WorkerProfileDto ToDto(WorkerProfile p, string fullName, Domain.Enums.Language language) => new(
         p.Id, p.UserId, fullName, p.WorkerType, p.CompanyName, p.Voen, p.TeamSize, p.SpecializationId,
         SpecializationService.ResolveName(p.Specialization.Translations, language),
-        p.ExperienceYears, p.Bio, p.City, p.DailyRate, p.IsAvailableForHire, p.IsVerified);
+        p.ExperienceYears, p.Bio, p.City, p.DailyRate, p.IsAvailableForHire, p.IsVerified,
+        p.IsArchitectTeamMember, p.ArchitectName, p.ArchitectStudio);
 }
 
