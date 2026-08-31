@@ -1,8 +1,7 @@
 using eProrab.Application.Interfaces;
 using eProrab.Infrastructure.Options;
+using Google.Apis.Auth;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
 
 namespace eProrab.Infrastructure.Services;
@@ -18,88 +17,73 @@ public class OAuthTokenValidator(
     private readonly HttpClient _httpClient = httpClient;
 
     /// <summary>
-    /// Validate a Google ID token and extract user information.
+    /// Validate a Google ID Token (NOT access_token!) using the official
+    /// Google.Apis.Auth library and extract user information.
+    ///
+    /// ⚠️  Frontend (Vercel) tərəfindən bu endpoint-ə göndərilən JSON body:
+    ///     { "credential": "<Google ID Token>" }
+    ///     və ya  { "idToken": "<Google ID Token>" }
+    ///
+    ///     Google Sign-In JavaScript Library ilə istifadə zamanı:
+    ///       - google.accounts.id.initialize callback-də gələn `response.credential`
+    ///         birbaşa bu metoda ötürülməlidir.
+    ///       - Heç vaxt access_token göndərməyin — o JWT deyil, opaque tokendır.
     /// </summary>
-    public async Task<(string GoogleId, string Email, string FullName)> ValidateGoogleTokenAsync(string idToken, CancellationToken ct = default)
+    public async Task<(string GoogleId, string Email, string FullName)> ValidateGoogleTokenAsync(
+        string idToken,
+        CancellationToken ct = default)
     {
         try
         {
-            // GET Google's public keys
-            const string googleJwksUrl = "https://www.googleapis.com/oauth2/v3/certs";
-            var response = await _httpClient.GetAsync(googleJwksUrl, ct);
-            response.EnsureSuccessStatusCode();
-            var jwksContent = await response.Content.ReadAsStringAsync(ct);
-
-            // Parse the token without validating signature first (to get kid)
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.ReadToken(idToken) as JwtSecurityToken 
-                ?? throw new UnauthorizedAccessException("Invalid token format.");
-
-            // Decode header to get key ID
-            var kid = token.Header["kid"]?.ToString();
-
-            // Parse JWKS to find the matching key
-            using var jDoc = JsonDocument.Parse(jwksContent);
-            var keysElement = jDoc.RootElement.GetProperty("keys");
-            JsonElement? matchingKey = null;
-
-            foreach (var keyElement in keysElement.EnumerateArray())
+            // Google.Apis.Auth kitabxanası:
+            //   1. Google-un açıq açarlarını (JWKS) avtomatik əldə edir və keşləyir.
+            //   2. İmzanı, iat/exp, iss ("accounts.google.com") yoxlayır.
+            //   3. audience olaraq Google Console-dakı Client ID ilə müqayisə edir.
+            //   4. sub, email, name kimi claim-ləri birbaşa payload-dan oxuyur —
+            //      JwtSecurityTokenHandler-in DefaultInboundClaimTypeMap remapping
+            //      problemi tamamilə aradan qalxır.
+            var settings = new GoogleJsonWebSignature.ValidationSettings
             {
-                if (keyElement.TryGetProperty("kid", out var keyKid) && keyKid.GetString() == kid)
-                {
-                    matchingKey = keyElement;
-                    break;
-                }
-            }
-
-            if (matchingKey == null)
-            {
-                throw new UnauthorizedAccessException("Could not find matching key for token.");
-            }
-
-            // Build security key from JWKS key
-            var keyObj = matchingKey.Value;
-            var e = keyObj.GetProperty("e").GetString();
-            var n = keyObj.GetProperty("n").GetString();
-
-            var rsa = System.Security.Cryptography.RSA.Create();
-            var rsaParameters = RSAParametersExtensions.CreateRSAParameters(e, n);
-            rsa.ImportParameters(rsaParameters);
-            var securityKey = new RsaSecurityKey(rsa) { KeyId = kid };
-
-            // Validate token
-            var validationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidIssuer = "https://accounts.google.com",
-                ValidateAudience = true,
-                ValidAudience = _oauthOptions.Google.ClientId,
-                ValidateLifetime = true,
-                IssuerSigningKey = securityKey,
-                ClockSkew = TimeSpan.Zero
+                Audience = [_oauthOptions.Google.ClientId]
             };
 
-            var principal = tokenHandler.ValidateToken(idToken, validationParameters, out var validatedToken);
+            GoogleJsonWebSignature.Payload payload =
+                await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
 
-            // Extract user info from claims
-            var googleId = principal.FindFirst("sub")?.Value 
+            // payload.Subject == "sub" claim-i (unikal Google istifadəçi ID-si)
+            var googleId = payload.Subject
                 ?? throw new UnauthorizedAccessException("Missing 'sub' claim in Google token.");
-            var email = principal.FindFirst("email")?.Value 
+
+            var email = payload.Email
                 ?? throw new UnauthorizedAccessException("Missing 'email' claim in Google token.");
-            var fullName = principal.FindFirst("name")?.Value ?? email.Split('@')[0];
+
+            // payload.Name Google hesabındakı tam ad; yoxdursa email prefix istifadə edilir
+            var fullName = payload.Name ?? email.Split('@')[0];
 
             return (googleId, email, fullName);
         }
-        catch (Exception ex) when (!(ex is UnauthorizedAccessException))
+        catch (InvalidJwtException ex)
         {
-            throw new UnauthorizedAccessException($"Google token validation failed: {ex.Message}", ex);
+            // Google.Apis.Auth token etibarsız və ya müddəti bitib
+            throw new UnauthorizedAccessException(
+                $"Google token validation failed: {ex.Message}", ex);
+        }
+        catch (Exception ex) when (ex is not UnauthorizedAccessException)
+        {
+            throw new UnauthorizedAccessException(
+                $"Google token validation failed: {ex.Message}", ex);
         }
     }
 
     /// <summary>
-    /// Validate a Facebook ID token and extract user information.
+    /// Validate a Facebook access token and extract user information.
+    ///
+    /// ⚠️  Frontend tərəfindən: Facebook Login SDK-dan gələn accessToken
+    ///     bu metoda ötürülməlidir (FB.getLoginStatus callback-də response.authResponse.accessToken).
     /// </summary>
-    public async Task<(string FacebookId, string Email, string FullName)> ValidateFacebookTokenAsync(string idToken, CancellationToken ct = default)
+    public async Task<(string FacebookId, string Email, string FullName)> ValidateFacebookTokenAsync(
+        string idToken,
+        CancellationToken ct = default)
     {
         try
         {
@@ -121,51 +105,23 @@ public class OAuthTokenValidator(
                 throw new UnauthorizedAccessException("Facebook token validation failed.");
             }
 
-            var facebookId = root.GetProperty("id").GetString() 
+            var facebookId = root.GetProperty("id").GetString()
                 ?? throw new UnauthorizedAccessException("Missing Facebook ID in response.");
-            var email = root.TryGetProperty("email", out var emailElement) 
-                ? emailElement.GetString() 
+
+            var email = root.TryGetProperty("email", out var emailElement)
+                ? (emailElement.GetString() ?? $"{facebookId}@facebook.com")
                 : $"{facebookId}@facebook.com";
-            var fullName = root.TryGetProperty("name", out var nameElement) 
-                ? nameElement.GetString() 
+
+            var fullName = root.TryGetProperty("name", out var nameElement)
+                ? (nameElement.GetString() ?? facebookId)
                 : facebookId;
 
             return (facebookId, email, fullName);
         }
-        catch (Exception ex) when (!(ex is UnauthorizedAccessException))
+        catch (Exception ex) when (ex is not UnauthorizedAccessException)
         {
-            throw new UnauthorizedAccessException($"Facebook token validation failed: {ex.Message}", ex);
+            throw new UnauthorizedAccessException(
+                $"Facebook token validation failed: {ex.Message}", ex);
         }
-    }
-}
-
-/// <summary>
-/// Helper extension for RSA parameter conversion from JWKS.
-/// </summary>
-internal static class RSAParametersExtensions
-{
-    public static System.Security.Cryptography.RSAParameters CreateRSAParameters(string e, string n)
-    {
-        var exponent = Base64UrlDecode(e);
-        var modulus = Base64UrlDecode(n);
-
-        return new System.Security.Cryptography.RSAParameters
-        {
-            Exponent = exponent,
-            Modulus = modulus
-        };
-    }
-
-    private static byte[] Base64UrlDecode(string base64Url)
-    {
-        var padded = base64Url.Length % 4 == 0
-            ? base64Url
-            : base64Url + new string('=', 4 - base64Url.Length % 4);
-
-        var base64 = padded
-            .Replace("_", "/")
-            .Replace("-", "+");
-
-        return Convert.FromBase64String(base64);
     }
 }
