@@ -111,6 +111,9 @@ public class ItemService(IUnitOfWork uow, ILanguageProvider languageProvider) : 
             ImageUrl = request.ImageUrl,
             IsActive = request.IsActive,
             IsFinishMaterial = request.IsFinishMaterial,
+            Dimensions = request.Dimensions,
+            MarketUserId = request.MarketUserId,
+            MarketName = request.MarketName,
             Translations = request.Translations
                 .Select(t => new ItemTranslation { Language = t.Language, Name = t.Name, Description = t.Description })
                 .ToList()
@@ -141,6 +144,11 @@ public class ItemService(IUnitOfWork uow, ILanguageProvider languageProvider) : 
         item.ImageUrl = request.ImageUrl;
         item.IsActive = request.IsActive;
         item.IsFinishMaterial = request.IsFinishMaterial;
+        item.Dimensions = request.Dimensions;
+        if (!string.IsNullOrEmpty(request.MarketName))
+        {
+            item.MarketName = request.MarketName;
+        }
         item.UpdatedAtUtc = DateTime.UtcNow;
 
         foreach (var translation in item.Translations)
@@ -174,11 +182,13 @@ public class ItemService(IUnitOfWork uow, ILanguageProvider languageProvider) : 
         return new ItemDto(
             i.Id, i.Sku, i.CategoryId, CategoryService.ResolveName(i.Category.Translations, language),
             i.Unit, i.Price, i.StockQuantity, i.ImageUrl, i.IsActive, i.IsFinishMaterial,
-            translation.Name, translation.Description);
+            translation.Name, translation.Description,
+            i.Dimensions, i.MarketUserId, i.MarketName, i.SurfaceType);
     }
 
     private static ItemAdminDto ToAdminDto(Item i) => new(
         i.Id, i.Sku, i.CategoryId, i.Unit, i.Price, i.StockQuantity, i.ImageUrl, i.IsActive, i.IsFinishMaterial,
         i.CreatedAtUtc, i.UpdatedAtUtc,
-        i.Translations.Select(t => new ItemTranslationDto(t.Language, t.Name, t.Description)).ToList());
+        i.Translations.Select(t => new ItemTranslationDto(t.Language, t.Name, t.Description)).ToList(),
+        i.Dimensions, i.MarketUserId, i.MarketName);
 }

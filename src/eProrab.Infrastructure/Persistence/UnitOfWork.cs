@@ -22,6 +22,7 @@ public class UnitOfWork : IUnitOfWork
         RefreshTokens = new Repository<RefreshToken>(context);
         SavedCalculations = new Repository<SavedCalculation>(context);
         DirectMessages = new Repository<DirectMessage>(context);
+        MarketProfiles = new Repository<MarketProfile>(context);
     }
 
     public IRepository<Category> Categories { get; }
@@ -36,6 +37,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<RefreshToken> RefreshTokens { get; }
     public IRepository<SavedCalculation> SavedCalculations { get; }
     public IRepository<DirectMessage> DirectMessages { get; }
+    public IRepository<MarketProfile> MarketProfiles { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken ct = default) => _context.SaveChangesAsync(ct);
 }

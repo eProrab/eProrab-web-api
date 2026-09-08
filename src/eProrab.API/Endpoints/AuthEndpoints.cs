@@ -57,6 +57,12 @@ public static class AuthEndpoints
             .WithSummary("Update the authenticated caller's own profile (fullName, phoneNumber).")
             .RequireAuthorization();
 
+        group.MapPut("/role", async (SelectRoleRequest request, ICurrentUserService currentUser, IAuthService authService, CancellationToken ct) =>
+                Results.Ok(await authService.SetUserRoleAsync(currentUser.UserId!.Value, request.Role, ct)))
+            .WithValidation<SelectRoleRequest>()
+            .WithSummary("Set or update the authenticated caller's own role (Client, Worker, Architect).")
+            .RequireAuthorization();
+
         group.MapPost("/google-login", async (OAuthLoginRequest request, IAuthService authService, CancellationToken ct) =>
                 Results.Ok(await authService.GoogleLoginAsync(request, ct)))
             .WithValidation<OAuthLoginRequest>()

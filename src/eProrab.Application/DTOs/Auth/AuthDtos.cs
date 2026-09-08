@@ -20,6 +20,8 @@ public record UpdateProfileRequest(
     string FullName,
     string? PhoneNumber);
 
+public record SelectRoleRequest(string Role);
+
 public record RefreshRequest(string RefreshToken);
 
 public record CurrentUserDto(
@@ -30,13 +32,15 @@ public record CurrentUserDto(
     Language PreferredLanguage,
     IReadOnlyList<string> Roles,
     bool IsActive,
-    bool HasWorkerProfile);
+    bool HasWorkerProfile,
+    bool HasMarketProfile = false);
 
 public record AuthResponse(
     string AccessToken,
     DateTime AccessTokenExpiresAtUtc,
     string RefreshToken,
-    CurrentUserDto User);
+    CurrentUserDto User,
+    bool IsNewAccount = false);
 
 /// <summary>
 /// OAuth login request. The IdToken is obtained from the OAuth provider (Google/Facebook)

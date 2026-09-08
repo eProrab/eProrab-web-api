@@ -117,6 +117,7 @@ app.MapJobEndpoints();
 app.MapAdminHiringEndpoints();
 app.MapCalculationEndpoints();
 app.MapChatEndpoints();
+app.MapMarketCabinetEndpoints();
 
 
 app.MapGet("/", () => Results.Ok(new { service = "eProrab API", status = "running" }))

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using eProrab.Application.DTOs.Calculations;
 using eProrab.Application.Interfaces;
 using eProrab.Domain.Entities;
@@ -7,30 +8,109 @@ namespace eProrab.Application.Services;
 
 public class CalculationService(IUnitOfWork uow) : ICalculationService
 {
+    // ──────────────────────────────────────────────────────────────────────────
+    // Helper: map DTO rooms or raw RoomsJson → engine input rooms
+    // ──────────────────────────────────────────────────────────────────────────
+    private static IReadOnlyList<RoomInput>? MapRooms(IReadOnlyList<RoomInputDto>? dtoRooms, string? roomsJson = null)
+    {
+        if (dtoRooms is { Count: > 0 })
+        {
+            return dtoRooms
+                .Select(r => new RoomInput(
+                    r.Area,
+                    r.Components
+                        .Select(c => new ComponentInput(c.Enabled, c.Tier))
+                        .ToList()))
+                .ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(roomsJson))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(roomsJson);
+                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    var list = new List<RoomInput>();
+                    foreach (var roomEl in doc.RootElement.EnumerateArray())
+                    {
+                        var area = roomEl.TryGetProperty("area", out var aProp) ? aProp.GetDouble() : 0;
+                        var comps = new List<ComponentInput>();
+                        if (roomEl.TryGetProperty("components", out var compsEl))
+                        {
+                            if (compsEl.ValueKind == JsonValueKind.Object)
+                            {
+                                foreach (var compProp in compsEl.EnumerateObject())
+                                {
+                                    var enabled = compProp.Value.TryGetProperty("enabled", out var enProp) && enProp.GetBoolean();
+                                    var tier = compProp.Value.TryGetProperty("tier", out var trProp) ? trProp.GetString() : null;
+                                    comps.Add(new ComponentInput(enabled, tier));
+                                }
+                            }
+                            else if (compsEl.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var item in compsEl.EnumerateArray())
+                                {
+                                    var enabled = item.TryGetProperty("enabled", out var enProp) && enProp.GetBoolean();
+                                    var tier = item.TryGetProperty("tier", out var trProp) ? trProp.GetString() : null;
+                                    comps.Add(new ComponentInput(enabled, tier));
+                                }
+                            }
+                        }
+                        list.Add(new RoomInput(area, comps));
+                    }
+                    if (list.Count > 0) return list;
+                }
+            }
+            catch
+            {
+                // Fallback gracefully to default factor
+            }
+        }
+
+        return null;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Save (authenticated)
+    // ──────────────────────────────────────────────────────────────────────────
     public async Task<SavedCalculationDto> SaveAsync(Guid userId, SaveCalculationRequest request, CancellationToken ct = default)
     {
+        // Backend recalculates — never trusts client-provided budget values
+        var engineInput = new CalculationInput(
+            request.PropertyType,
+            request.StructureAge,
+            request.RepairStyle,
+            request.TariffTier,
+            request.TotalArea,
+            request.IncludeRoughMaterials,
+            MapRooms(request.RoomsInput, request.RoomsJson)
+        );
+
+        var result = CalculationEngine.Calculate(engineInput);
+
         var title = !string.IsNullOrWhiteSpace(request.Title)
             ? request.Title
             : $"{request.PropertyType} - {request.RoomCount} otaq ({request.TotalArea} m²)";
 
         var calculation = new SavedCalculation
         {
-            UserId = userId,
-            Title = title,
-            PropertyType = request.PropertyType,
-            StructureAge = request.StructureAge,
-            RepairStyle = request.RepairStyle,
-            TariffTier = request.TariffTier,
-            TotalArea = request.TotalArea,
-            WallHeight = request.WallHeight > 0 ? request.WallHeight : 2.8,
-            RoomCount = request.RoomCount,
-            DoorCount = request.DoorCount,
-            WindowCount = request.WindowCount,
-            TotalBudget = request.TotalBudget,
-            MaterialCost = request.MaterialCost,
-            LaborCost = request.LaborCost,
-            OtherCost = request.OtherCost,
-            RoomsJson = request.RoomsJson ?? "[]"
+            UserId        = userId,
+            Title         = title,
+            PropertyType  = request.PropertyType,
+            StructureAge  = request.StructureAge,
+            RepairStyle   = request.RepairStyle,
+            TariffTier    = request.TariffTier,
+            TotalArea     = request.TotalArea,
+            WallHeight    = request.WallHeight > 0 ? request.WallHeight : 2.8,
+            RoomCount     = request.RoomCount,
+            DoorCount     = request.DoorCount,
+            WindowCount   = request.WindowCount,
+            TotalBudget   = result.TotalBudget,   // ← engine result
+            MaterialCost  = result.MaterialCost,  // ← engine result
+            LaborCost     = result.LaborCost,     // ← engine result
+            OtherCost     = result.OtherCost,     // ← engine result
+            RoomsJson     = request.RoomsJson ?? "[]"
         };
 
         await uow.SavedCalculations.AddAsync(calculation, ct);
@@ -39,6 +119,9 @@ public class CalculationService(IUnitOfWork uow) : ICalculationService
         return ToDto(calculation);
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // List / Get / Delete (authenticated)
+    // ──────────────────────────────────────────────────────────────────────────
     public async Task<IReadOnlyList<SavedCalculationDto>> GetUserCalculationsAsync(Guid userId, CancellationToken ct = default)
     {
         var calculations = await uow.SavedCalculations.Query()
@@ -69,6 +152,41 @@ public class CalculationService(IUnitOfWork uow) : ICalculationService
         }
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // Estimate (public, no auth required)
+    // ──────────────────────────────────────────────────────────────────────────
+    public Task<CalculationEstimateResponse> EstimateAsync(CalculationEstimateRequest request, CancellationToken ct = default)
+    {
+        var engineInput = new CalculationInput(
+            request.PropertyType,
+            request.StructureAge,
+            request.RepairStyle,
+            request.TariffTier,
+            request.TotalArea,
+            request.IncludeRoughMaterials,
+            MapRooms(request.Rooms, request.RoomsJson)
+        );
+
+        var result = CalculationEngine.Calculate(engineInput);
+
+        var perSqMeter = request.TotalArea > 0
+            ? Math.Round(result.TotalBudget / (decimal)request.TotalArea, MidpointRounding.AwayFromZero)
+            : 0m;
+
+        var response = new CalculationEstimateResponse(
+            result.TotalBudget,
+            result.MaterialCost,
+            result.LaborCost,
+            result.OtherCost,
+            perSqMeter
+        );
+
+        return Task.FromResult(response);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Mapper
+    // ──────────────────────────────────────────────────────────────────────────
     private static SavedCalculationDto ToDto(SavedCalculation c) => new(
         c.Id,
         c.UserId,
@@ -90,3 +208,4 @@ public class CalculationService(IUnitOfWork uow) : ICalculationService
         c.CreatedAtUtc
     );
 }
+

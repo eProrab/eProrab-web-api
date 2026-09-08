@@ -8,13 +8,15 @@ public static class AuthorizationPolicies
     public const string AdminOnly = "AdminOnly";
     public const string EmployerRoles = "EmployerRoles"; // can post/manage jobs
     public const string WorkerOnly = "WorkerOnly";
+    public const string MarketOnly = "MarketOnly";
 
     public static IServiceCollection AddAppAuthorization(this IServiceCollection services)
     {
         services.AddAuthorizationBuilder()
             .AddPolicy(AdminOnly, p => p.RequireRole(Roles.Admin))
             .AddPolicy(EmployerRoles, p => p.RequireRole(Roles.Client, Roles.Manager, Roles.Admin))
-            .AddPolicy(WorkerOnly, p => p.RequireRole(Roles.Worker));
+            .AddPolicy(WorkerOnly, p => p.RequireRole(Roles.Worker))
+            .AddPolicy(MarketOnly, p => p.RequireRole(Roles.Market, Roles.Admin));
 
         return services;
     }

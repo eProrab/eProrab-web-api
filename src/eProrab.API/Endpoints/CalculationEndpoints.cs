@@ -7,6 +7,18 @@ public static class CalculationEndpoints
 {
     public static void MapCalculationEndpoints(this IEndpointRouteBuilder app)
     {
+        // ── Public: anonymous real-time estimate ──────────────────────────────
+        app.MapPost("/api/calculations/estimate",
+            async (CalculationEstimateRequest request, ICalculationService service, CancellationToken ct) =>
+            {
+                var result = await service.EstimateAsync(request, ct);
+                return Results.Ok(result);
+            })
+            .WithTags("Calculations")
+            .WithSummary("Compute a real-time repair cost estimate without saving. No authentication required.")
+            .AllowAnonymous();
+
+        // ── Authenticated: save / list / get / delete ─────────────────────────
         var group = app.MapGroup("/api/user/calculations")
             .WithTags("User Calculations")
             .RequireAuthorization();
@@ -36,3 +48,4 @@ public static class CalculationEndpoints
         }).WithSummary("Delete a saved calculation from user cabinet.");
     }
 }
+

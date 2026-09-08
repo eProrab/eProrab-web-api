@@ -34,5 +34,24 @@ public class Item : BaseEntity
     /// </summary>
     public bool IsFinishMaterial { get; set; } = false;
 
+    /// <summary>
+    /// Which building surface this finish material targets.
+    /// Set by the market partner when uploading. Used by the renovation
+    /// calculator to display items in the correct category tab.
+    /// </summary>
+    public SurfaceType SurfaceType { get; set; } = SurfaceType.None;
+
+    /// <summary>
+    /// Size specifications (e.g., "60x120 sm", "2.5x1.2 m, 12.5 mm", "50 kq kisə", "100x200x50 mm").
+    /// </summary>
+    public string? Dimensions { get; set; }
+
+    /// <summary>Optional FK to the Market vendor user who listed this item.</summary>
+    public Guid? MarketUserId { get; set; }
+
+    /// <summary>Display name of the selling market / store.</summary>
+    public string? MarketName { get; set; }
+
     public ICollection<ItemTranslation> Translations { get; set; } = [];
 }
+
