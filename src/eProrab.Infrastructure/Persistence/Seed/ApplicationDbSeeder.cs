@@ -88,6 +88,31 @@ public static class ApplicationDbSeeder
             @"ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""FacebookLinkedAtUtc"" timestamp with time zone;",
             @"CREATE INDEX IF NOT EXISTS ""IX_Users_GoogleId"" ON ""Users""(""GoogleId"");",
             @"CREATE INDEX IF NOT EXISTS ""IX_Users_FacebookId"" ON ""Users""(""FacebookId"");",
+            @"CREATE TABLE IF NOT EXISTS ""MarketProfiles"" (
+                ""Id"" serial NOT NULL,
+                ""UserId"" uuid NOT NULL,
+                ""StoreName"" character varying(200) NOT NULL,
+                ""Voen"" character varying(50),
+                ""Description"" character varying(2000),
+                ""ContactPhone"" character varying(50),
+                ""ContactEmail"" character varying(100),
+                ""Address"" character varying(300),
+                ""City"" character varying(100),
+                ""LogoUrl"" character varying(2048),
+                ""BannerUrl"" character varying(2048),
+                ""WorkingHours"" character varying(200),
+                ""IsVerified"" boolean NOT NULL DEFAULT false,
+                ""IsActive"" boolean NOT NULL DEFAULT true,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone,
+                ""IsDeleted"" boolean NOT NULL DEFAULT false,
+                CONSTRAINT ""PK_MarketProfiles"" PRIMARY KEY (""Id"")
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_MarketProfiles_UserId"" ON ""MarketProfiles""(""UserId"");",
+            @"ALTER TABLE ""Items"" ADD COLUMN IF NOT EXISTS ""Dimensions"" character varying(200);",
+            @"ALTER TABLE ""Items"" ADD COLUMN IF NOT EXISTS ""MarketUserId"" uuid;",
+            @"ALTER TABLE ""Items"" ADD COLUMN IF NOT EXISTS ""MarketName"" character varying(200);",
+            @"CREATE INDEX IF NOT EXISTS ""IX_Items_MarketUserId"" ON ""Items""(""MarketUserId"");",
         };
 
         foreach (var statement in schemaStatements)

@@ -17,6 +17,8 @@ public interface IAuthService
     Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default);
 
     Task<CurrentUserDto> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default);
+    
+    Task<AuthResponse> SetUserRoleAsync(Guid userId, string role, CancellationToken ct = default);
 
     /// <summary>
     /// Authenticate via Google OAuth. Auto-creates account if user doesn't exist.

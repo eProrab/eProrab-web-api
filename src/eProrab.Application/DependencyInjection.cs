@@ -16,7 +16,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkerService, WorkerService>();
         services.AddScoped<IJobService, JobService>();
         services.AddScoped<ICalculationService, CalculationService>();
-
+        services.AddScoped<IMarketService, MarketService>();
 
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 

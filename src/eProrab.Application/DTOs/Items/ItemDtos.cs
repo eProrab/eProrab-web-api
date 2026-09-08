@@ -18,7 +18,12 @@ public record ItemDto(
     bool IsActive,
     bool IsFinishMaterial,
     string Name,
-    string? Description);
+    string? Description,
+    string? Dimensions = null,
+    Guid? MarketUserId = null,
+    string? MarketName = null,
+    SurfaceType SurfaceType = SurfaceType.None);
+
 
 /// <summary>Admin view — includes every translation so the admin panel can edit all 3 languages at once.</summary>
 public record ItemAdminDto(
@@ -33,7 +38,10 @@ public record ItemAdminDto(
     bool IsFinishMaterial,
     DateTime CreatedAtUtc,
     DateTime? UpdatedAtUtc,
-    IReadOnlyList<ItemTranslationDto> Translations);
+    IReadOnlyList<ItemTranslationDto> Translations,
+    string? Dimensions = null,
+    Guid? MarketUserId = null,
+    string? MarketName = null);
 
 public record CreateItemRequest(
     string Sku,
@@ -44,7 +52,10 @@ public record CreateItemRequest(
     string? ImageUrl,
     bool IsActive,
     bool IsFinishMaterial,
-    IReadOnlyList<ItemTranslationDto> Translations);
+    IReadOnlyList<ItemTranslationDto> Translations,
+    string? Dimensions = null,
+    Guid? MarketUserId = null,
+    string? MarketName = null);
 
 public record UpdateItemRequest(
     int CategoryId,
@@ -54,4 +65,6 @@ public record UpdateItemRequest(
     string? ImageUrl,
     bool IsActive,
     bool IsFinishMaterial,
-    IReadOnlyList<ItemTranslationDto> Translations);
+    IReadOnlyList<ItemTranslationDto> Translations,
+    string? Dimensions = null,
+    string? MarketName = null);

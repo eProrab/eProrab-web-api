@@ -22,6 +22,9 @@ public static class Roles
     /// <summary>Architect / Designer performing author supervision and project design.</summary>
     public const string Architect = "Architect";
 
-    public static readonly string[] All = [Admin, Manager, Client, Worker, Architect];
+    /// <summary>Construction & repair materials market / store partner.</summary>
+    public const string Market = "Market";
+
+    public static readonly string[] All = [Admin, Manager, Client, Worker, Architect, Market];
 }
 

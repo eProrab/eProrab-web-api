@@ -21,6 +21,7 @@ public interface IUnitOfWork
     IRepository<RefreshToken> RefreshTokens { get; }
     IRepository<SavedCalculation> SavedCalculations { get; }
     IRepository<DirectMessage> DirectMessages { get; }
+    IRepository<MarketProfile> MarketProfiles { get; }
 
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

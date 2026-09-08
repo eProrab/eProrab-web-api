@@ -17,8 +17,9 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
         RuleFor(x => x.Role).Must(r => string.IsNullOrEmpty(r) ||
                                        r == eProrab.Domain.Constants.Roles.Client ||
                                        r == eProrab.Domain.Constants.Roles.Worker ||
-                                       r == eProrab.Domain.Constants.Roles.Architect)
-            .WithMessage("Only 'Client', 'Worker' or 'Architect' roles are allowed during registration.");
+                                       r == eProrab.Domain.Constants.Roles.Architect ||
+                                       r == eProrab.Domain.Constants.Roles.Market)
+            .WithMessage("Only 'Client', 'Worker', 'Architect' or 'Market' roles are allowed during registration.");
     }
 }
 
@@ -48,5 +49,18 @@ public class RefreshRequestValidator : AbstractValidator<RefreshRequest>
     public RefreshRequestValidator()
     {
         RuleFor(x => x.RefreshToken).NotEmpty();
+    }
+}
+
+public class SelectRoleRequestValidator : AbstractValidator<SelectRoleRequest>
+{
+    public SelectRoleRequestValidator()
+    {
+        RuleFor(x => x.Role).NotEmpty().Must(r =>
+            string.Equals(r, eProrab.Domain.Constants.Roles.Client, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(r, eProrab.Domain.Constants.Roles.Worker, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(r, eProrab.Domain.Constants.Roles.Architect, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(r, eProrab.Domain.Constants.Roles.Market, StringComparison.OrdinalIgnoreCase))
+            .WithMessage("Yalnız 'Client', 'Worker', 'Architect' və ya 'Market' rolları seçilə bilər.");
     }
 }
