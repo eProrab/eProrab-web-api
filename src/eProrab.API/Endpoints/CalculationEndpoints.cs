@@ -1,3 +1,4 @@
+using eProrab.API.Filters;
 using eProrab.Application.DTOs.Calculations;
 using eProrab.Application.Interfaces;
 
@@ -14,6 +15,7 @@ public static class CalculationEndpoints
                 var result = await service.EstimateAsync(request, ct);
                 return Results.Ok(result);
             })
+            .WithValidation<CalculationEstimateRequest>()
             .WithTags("Calculations")
             .WithSummary("Compute a real-time repair cost estimate without saving. No authentication required.")
             .AllowAnonymous();
@@ -27,7 +29,9 @@ public static class CalculationEndpoints
         {
             var result = await service.SaveAsync(currentUser.UserId!.Value, request, ct);
             return Results.Created($"/api/user/calculations/{result.Id}", result);
-        }).WithSummary("Save a repair calculation estimate to the authenticated user's cabinet.");
+        })
+            .WithValidation<SaveCalculationRequest>()
+            .WithSummary("Save a repair calculation estimate to the authenticated user's cabinet.");
 
         group.MapGet("/", async (ICurrentUserService currentUser, ICalculationService service, CancellationToken ct) =>
         {

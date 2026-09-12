@@ -1,4 +1,5 @@
 using eProrab.API.Extensions;
+using eProrab.API.Filters;
 using eProrab.Application.Common;
 using eProrab.Application.DTOs.Markets;
 using eProrab.Application.Interfaces;
@@ -30,13 +31,17 @@ public static class MarketCabinetEndpoints
         {
             var created = await service.CreateOwnProfileAsync(currentUser.UserId!.Value, request, ct);
             return Results.Created("/api/market/profile", created);
-        }).WithSummary("Create caller's store profile.");
+        })
+            .WithValidation<UpsertMarketProfileRequest>()
+            .WithSummary("Create caller's store profile.");
 
         group.MapPut("/profile", async (UpsertMarketProfileRequest request, ICurrentUserService currentUser, IMarketService service, CancellationToken ct) =>
         {
             var updated = await service.UpdateOwnProfileAsync(currentUser.UserId!.Value, request, ct);
             return Results.Ok(updated);
-        }).WithSummary("Update caller's store profile.");
+        })
+            .WithValidation<UpsertMarketProfileRequest>()
+            .WithSummary("Update caller's store profile.");
 
         // Materials / Items management endpoints
         group.MapGet("/items", async ([AsParameters] PaginationQuery query, int? categoryId, ICurrentUserService currentUser, IMarketService service, CancellationToken ct) =>
@@ -49,13 +54,17 @@ public static class MarketCabinetEndpoints
         {
             var created = await service.CreateItemAsync(currentUser.UserId!.Value, request, ct);
             return Results.Created($"/api/market/items/{created.Id}", created);
-        }).WithSummary("Add a new material to the store inventory.");
+        })
+            .WithValidation<CreateMarketItemRequest>()
+            .WithSummary("Add a new material to the store inventory.");
 
         group.MapPut("/items/{id:int}", async (int id, UpdateMarketItemRequest request, ICurrentUserService currentUser, IMarketService service, CancellationToken ct) =>
         {
             var updated = await service.UpdateItemAsync(currentUser.UserId!.Value, id, request, ct);
             return Results.Ok(updated);
-        }).WithSummary("Update a material in the store inventory.");
+        })
+            .WithValidation<UpdateMarketItemRequest>()
+            .WithSummary("Update a material in the store inventory.");
 
         group.MapDelete("/items/{id:int}", async (int id, ICurrentUserService currentUser, IMarketService service, CancellationToken ct) =>
         {

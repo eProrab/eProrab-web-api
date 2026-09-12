@@ -57,24 +57,33 @@ builder.Services
             ValidIssuer = jwtOptions.Issuer,
             ValidAudience = jwtOptions.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
-            ClockSkew = TimeSpan.FromSeconds(30)
+            ClockSkew = TimeSpan.FromSeconds(10)
         };
     });
 
 const string CorsPolicy = "eProrabCors";
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+var isDevelopment = builder.Environment.IsDevelopment();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicy, policy =>
     {
         if (allowedOrigins.Length > 0)
         {
-            policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+            policy.WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        }
+        else if (isDevelopment)
+        {
+            // Development: permissive for local testing
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
         }
         else
         {
-            // No origins configured (e.g. first local run) — permissive default so the API is usable out of the box.
-            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+            // Production: restrict to prevent CORS abuse
+            policy.WithOrigins("https://example.com").AllowAnyHeader().AllowAnyMethod();
         }
     });
 });
@@ -84,6 +93,9 @@ var app = builder.Build();
 // ---------------------------------------------------------------- pipeline
 
 app.UseExceptionHandler();
+
+// Add security headers to all responses
+app.UseSecurityHeaders();
 
 // Enable Swagger in Development, or when ENABLE_SWAGGER=true is set in the environment.
 var enableSwaggerEnv = Environment.GetEnvironmentVariable("ENABLE_SWAGGER");
