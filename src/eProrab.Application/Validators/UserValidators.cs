@@ -8,13 +8,24 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
 {
     public CreateUserRequestValidator()
     {
-        RuleFor(x => x.FullName).NotEmpty().MaximumLength(150);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
-        RuleFor(x => x.Password).NotEmpty().MinimumLength(8);
-        RuleFor(x => x.PhoneNumber).MaximumLength(30);
-        RuleFor(x => x.PreferredLanguage).IsInEnum();
-        RuleFor(x => x.Role).NotEmpty().Must(r => Roles.All.Contains(r))
-            .WithMessage($"Role must be one of: {string.Join(", ", Roles.All)}.");
+        RuleFor(x => x.FullName)
+            .NotEmpty().WithMessage("Ad tələb olunur.")
+            .MaximumLength(150).WithMessage("Ad maksimum 150 simvoldan çox ola bilməz.");
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email tələb olunur.")
+            .EmailAddress().WithMessage("Email formatı düzgün deyil.")
+            .MaximumLength(256).WithMessage("Email maksimum 256 simvoldan çox ola bilməz.");
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("Şifrə tələb olunur.")
+            .MinimumLength(8).WithMessage("Şifrə ən az 8 simvoldan ibarət olmalıdır.");
+        RuleFor(x => x.PhoneNumber)
+            .MaximumLength(30).WithMessage("Telefon nömrəsi maksimum 30 simvoldan çox ola bilməz.");
+        RuleFor(x => x.PreferredLanguage)
+            .IsInEnum().WithMessage("Dil seçimi düzgün deyil.");
+        RuleFor(x => x.Role)
+            .NotEmpty().WithMessage("Rol tələb olunur.")
+            .Must(r => Roles.All.Contains(r))
+            .WithMessage($"Rol aşağıdakılardan biri olmalıdır: {string.Join(", ", Roles.All)}");
     }
 }
 
@@ -22,9 +33,13 @@ public class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
 {
     public UpdateUserRequestValidator()
     {
-        RuleFor(x => x.FullName).NotEmpty().MaximumLength(150);
-        RuleFor(x => x.PhoneNumber).MaximumLength(30);
-        RuleFor(x => x.PreferredLanguage).IsInEnum();
+        RuleFor(x => x.FullName)
+            .NotEmpty().WithMessage("Ad tələb olunur.")
+            .MaximumLength(150).WithMessage("Ad maksimum 150 simvoldan çox ola bilməz.");
+        RuleFor(x => x.PhoneNumber)
+            .MaximumLength(30).WithMessage("Telefon nömrəsi maksimum 30 simvoldan çox ola bilməz.");
+        RuleFor(x => x.PreferredLanguage)
+            .IsInEnum().WithMessage("Dil seçimi düzgün deyil.");
     }
 }
 
@@ -32,8 +47,10 @@ public class ChangeUserRoleRequestValidator : AbstractValidator<ChangeUserRoleRe
 {
     public ChangeUserRoleRequestValidator()
     {
-        RuleFor(x => x.Role).NotEmpty().Must(r => Roles.All.Contains(r))
-            .WithMessage($"Role must be one of: {string.Join(", ", Roles.All)}.");
+        RuleFor(x => x.Role)
+            .NotEmpty().WithMessage("Rol tələb olunur.")
+            .Must(r => Roles.All.Contains(r))
+            .WithMessage($"Rol aşağıdakılardan biri olmalıdır: {string.Join(", ", Roles.All)}");
     }
 }
 
@@ -41,6 +58,8 @@ public class AdminResetPasswordRequestValidator : AbstractValidator<AdminResetPa
 {
     public AdminResetPasswordRequestValidator()
     {
-        RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(8);
+        RuleFor(x => x.NewPassword)
+            .NotEmpty().WithMessage("Yeni şifrə tələb olunur.")
+            .MinimumLength(8).WithMessage("Yeni şifrə ən az 8 simvoldan ibarət olmalıdır.");
     }
 }

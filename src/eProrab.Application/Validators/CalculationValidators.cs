@@ -14,51 +14,51 @@ public class SaveCalculationRequestValidator : AbstractValidator<SaveCalculation
     public SaveCalculationRequestValidator()
     {
         RuleFor(x => x.Title)
-            .MaximumLength(200).WithMessage("Title must not exceed 200 characters.")
+            .MaximumLength(200).WithMessage("Başlıq maksimum 200 simvoldan çox ola bilməz.")
             .When(x => !string.IsNullOrWhiteSpace(x.Title));
 
         RuleFor(x => x.PropertyType)
-            .NotEmpty().WithMessage("Property type is required.")
-            .MaximumLength(50).WithMessage("Property type must not exceed 50 characters.")
-            .Must(BeValidPropertyType).WithMessage("Property type must be one of: apartment, house, office, commercial, other.");
+            .NotEmpty().WithMessage("Mülk tipi tələb olunur.")
+            .MaximumLength(50).WithMessage("Mülk tipi maksimum 50 simvoldan çox ola bilməz.")
+            .Must(BeValidPropertyType).WithMessage("Mülk tipi aşağıdakılardan biri olmalıdır: apartment, house, office, commercial, other.");
 
         RuleFor(x => x.StructureAge)
-            .NotEmpty().WithMessage("Structure age is required.")
-            .MaximumLength(50).WithMessage("Structure age must not exceed 50 characters.")
-            .Must(BeValidStructureAge).WithMessage("Structure age must be one of: new, 1-5, 5-10, 10-20, 20-30, 30+.");
+            .NotEmpty().WithMessage("Binanın yaşı tələb olunur.")
+            .MaximumLength(50).WithMessage("Binanın yaşı maksimum 50 simvoldan çox ola bilməz.")
+            .Must(BeValidStructureAge).WithMessage("Binanın yaşı aşağıdakılardan biri olmalıdır: new, 1-5, 5-10, 10-20, 20-30, 30+.");
 
         RuleFor(x => x.RepairStyle)
-            .NotEmpty().WithMessage("Repair style is required.")
-            .MaximumLength(50).WithMessage("Repair style must not exceed 50 characters.")
-            .Must(BeValidRepairStyle).WithMessage("Repair style must be one of: basic, standard, premium, luxury.");
+            .NotEmpty().WithMessage("Təmir stili tələb olunur.")
+            .MaximumLength(50).WithMessage("Təmir stili maksimum 50 simvoldan çox ola bilməz.")
+            .Must(BeValidRepairStyle).WithMessage("Təmir stili aşağıdakılardan biri olmalıdır: basic, standard, premium, luxury.");
 
         RuleFor(x => x.TariffTier)
-            .NotEmpty().WithMessage("Tariff tier is required.")
-            .MaximumLength(50).WithMessage("Tariff tier must not exceed 50 characters.")
-            .Must(BeValidTariffTier).WithMessage("Tariff tier must be one of: tier1, tier2, tier3, tier4.");
+            .NotEmpty().WithMessage("Tarif səviyyəsi tələb olunur.")
+            .MaximumLength(50).WithMessage("Tarif səviyyəsi maksimum 50 simvoldan çox ola bilməz.")
+            .Must(BeValidTariffTier).WithMessage("Tarif səviyyəsi aşağıdakılardan biri olmalıdır: tier1, tier2, tier3, tier4.");
 
         RuleFor(x => x.TotalArea)
-            .GreaterThan(0).WithMessage("Total area must be greater than zero.")
-            .LessThanOrEqualTo(10000).WithMessage("Total area must not exceed 10,000 square meters.");
+            .GreaterThan(0).WithMessage("Ümumi sahə sıfırdan böyük olmalıdır.")
+            .LessThanOrEqualTo(10000).WithMessage("Ümumi sahə 10,000 kvadrat metrə qədər olmalıdır.");
 
         RuleFor(x => x.WallHeight)
-            .GreaterThan(0).WithMessage("Wall height must be greater than zero.")
-            .LessThanOrEqualTo(10).WithMessage("Wall height must not exceed 10 meters.");
+            .GreaterThan(0).WithMessage("Divar hündürlüyü sıfırdan böyük olmalıdır.")
+            .LessThanOrEqualTo(10).WithMessage("Divar hündürlüyü 10 metrə qədər olmalıdır.");
 
         RuleFor(x => x.RoomCount)
-            .GreaterThanOrEqualTo(0).WithMessage("Room count must be zero or positive.")
-            .LessThanOrEqualTo(1000).WithMessage("Room count must not exceed 1,000.");
+            .GreaterThanOrEqualTo(0).WithMessage("Otaq sayı sıfır və ya müsbət olmalıdır.")
+            .LessThanOrEqualTo(1000).WithMessage("Otaq sayı 1,000-ə qədər olmalıdır.");
 
         RuleFor(x => x.DoorCount)
-            .GreaterThanOrEqualTo(0).WithMessage("Door count must be zero or positive.")
-            .LessThanOrEqualTo(1000).WithMessage("Door count must not exceed 1,000.");
+            .GreaterThanOrEqualTo(0).WithMessage("Qapı sayı sıfır və ya müsbət olmalıdır.")
+            .LessThanOrEqualTo(1000).WithMessage("Qapı sayı 1,000-ə qədər olmalıdır.");
 
         RuleFor(x => x.WindowCount)
-            .GreaterThanOrEqualTo(0).WithMessage("Window count must be zero or positive.")
-            .LessThanOrEqualTo(1000).WithMessage("Window count must not exceed 1,000.");
+            .GreaterThanOrEqualTo(0).WithMessage("Pəncərə sayı sıfır və ya müsbət olmalıdır.")
+            .LessThanOrEqualTo(1000).WithMessage("Pəncərə sayı 1,000-ə qədər olmalıdır.");
 
         RuleFor(x => x.RoomsJson)
-            .MaximumLength(50000).WithMessage("Rooms JSON must not exceed 50,000 characters.")
+            .MaximumLength(50000).WithMessage("Otaqlar JSON maksimum 50,000 simvoldan çox ola bilməz.")
             .When(x => !string.IsNullOrWhiteSpace(x.RoomsJson));
 
         RuleFor(x => x.RoomsInput)
@@ -71,11 +71,11 @@ public class SaveCalculationRequestValidator : AbstractValidator<SaveCalculation
                 {
                     if (rooms[i].Area <= 0)
                     {
-                        context.AddFailure($"RoomsInput[{i}].Area", "Room area must be greater than zero.");
+                        context.AddFailure($"RoomsInput[{i}].Area", "Otaq sahəsi sıfırdan böyük olmalıdır.");
                     }
                     if (rooms[i].Area > 10000)
                     {
-                        context.AddFailure($"RoomsInput[{i}].Area", "Room area must not exceed 10,000 square meters.");
+                        context.AddFailure($"RoomsInput[{i}].Area", "Otaq sahəsi 10,000 kvadrat metrə qədər olmalıdır.");
                     }
                 }
             });
@@ -105,31 +105,31 @@ public class CalculationEstimateRequestValidator : AbstractValidator<Calculation
     public CalculationEstimateRequestValidator()
     {
         RuleFor(x => x.PropertyType)
-            .NotEmpty().WithMessage("Property type is required.")
-            .MaximumLength(50).WithMessage("Property type must not exceed 50 characters.")
-            .Must(BeValidPropertyType).WithMessage("Property type must be one of: apartment, house, office, commercial, other.");
+            .NotEmpty().WithMessage("Mülk tipi tələb olunur.")
+            .MaximumLength(50).WithMessage("Mülk tipi maksimum 50 simvoldan çox ola bilməz.")
+            .Must(BeValidPropertyType).WithMessage("Mülk tipi aşağıdakılardan biri olmalıdır: apartment, house, office, commercial, other.");
 
         RuleFor(x => x.StructureAge)
-            .NotEmpty().WithMessage("Structure age is required.")
-            .MaximumLength(50).WithMessage("Structure age must not exceed 50 characters.")
-            .Must(BeValidStructureAge).WithMessage("Structure age must be one of: new, 1-5, 5-10, 10-20, 20-30, 30+.");
+            .NotEmpty().WithMessage("Binanın yaşı tələb olunur.")
+            .MaximumLength(50).WithMessage("Binanın yaşı maksimum 50 simvoldan çox ola bilməz.")
+            .Must(BeValidStructureAge).WithMessage("Binanın yaşı aşağıdakılardan biri olmalıdır: new, 1-5, 5-10, 10-20, 20-30, 30+.");
 
         RuleFor(x => x.RepairStyle)
-            .NotEmpty().WithMessage("Repair style is required.")
-            .MaximumLength(50).WithMessage("Repair style must not exceed 50 characters.")
-            .Must(BeValidRepairStyle).WithMessage("Repair style must be one of: basic, standard, premium, luxury.");
+            .NotEmpty().WithMessage("Təmir stili tələb olunur.")
+            .MaximumLength(50).WithMessage("Təmir stili maksimum 50 simvoldan çox ola bilməz.")
+            .Must(BeValidRepairStyle).WithMessage("Təmir stili aşağıdakılardan biri olmalıdır: basic, standard, premium, luxury.");
 
         RuleFor(x => x.TariffTier)
-            .NotEmpty().WithMessage("Tariff tier is required.")
-            .MaximumLength(50).WithMessage("Tariff tier must not exceed 50 characters.")
-            .Must(BeValidTariffTier).WithMessage("Tariff tier must be one of: tier1, tier2, tier3, tier4.");
+            .NotEmpty().WithMessage("Tarif səviyyəsi tələb olunur.")
+            .MaximumLength(50).WithMessage("Tarif səviyyəsi maksimum 50 simvoldan çox ola bilməz.")
+            .Must(BeValidTariffTier).WithMessage("Tarif səviyyəsi aşağıdakılardan biri olmalıdır: tier1, tier2, tier3, tier4.");
 
         RuleFor(x => x.TotalArea)
-            .GreaterThan(0).WithMessage("Total area must be greater than zero.")
-            .LessThanOrEqualTo(10000).WithMessage("Total area must not exceed 10,000 square meters.");
+            .GreaterThan(0).WithMessage("Ümumi sahə sıfırdan böyük olmalıdır.")
+            .LessThanOrEqualTo(10000).WithMessage("Ümumi sahə 10,000 kvadrat metrə qədər olmalıdır.");
 
         RuleFor(x => x.RoomsJson)
-            .MaximumLength(50000).WithMessage("Rooms JSON must not exceed 50,000 characters.")
+            .MaximumLength(50000).WithMessage("Otaqlar JSON maksimum 50,000 simvoldan çox ola bilməz.")
             .When(x => !string.IsNullOrWhiteSpace(x.RoomsJson));
 
         RuleFor(x => x.Rooms)
@@ -139,7 +139,7 @@ public class CalculationEstimateRequestValidator : AbstractValidator<Calculation
 
                 if (rooms.Count > 1000)
                 {
-                    context.AddFailure("Rooms", "Cannot exceed 1,000 rooms.");
+                    context.AddFailure("Rooms", "1,000-dən çox otaq ola bilməz.");
                     return;
                 }
 
@@ -147,11 +147,11 @@ public class CalculationEstimateRequestValidator : AbstractValidator<Calculation
                 {
                     if (rooms[i].Area <= 0)
                     {
-                        context.AddFailure($"Rooms[{i}].Area", "Room area must be greater than zero.");
+                        context.AddFailure($"Rooms[{i}].Area", "Otaq sahəsi sıfırdan böyük olmalıdır.");
                     }
                     if (rooms[i].Area > 10000)
                     {
-                        context.AddFailure($"Rooms[{i}].Area", "Room area must not exceed 10,000 square meters.");
+                        context.AddFailure($"Rooms[{i}].Area", "Otaq sahəsi 10,000 kvadrat metrə qədər olmalıdır.");
                     }
                 }
             });

@@ -8,35 +8,35 @@ public class CreateItemRequestValidator : AbstractValidator<CreateItemRequest>
     public CreateItemRequestValidator()
     {
         RuleFor(x => x.Sku)
-            .NotEmpty().WithMessage("SKU is required.")
-            .MaximumLength(50).WithMessage("SKU must not exceed 50 characters.");
+            .NotEmpty().WithMessage("SKU tələb olunur.")
+            .MaximumLength(50).WithMessage("SKU maksimum 50 simvoldan çox ola bilməz.");
 
         RuleFor(x => x.CategoryId)
-            .GreaterThan(0).WithMessage("Category ID must be a positive number (greater than 0).")
-            .LessThanOrEqualTo(int.MaxValue).WithMessage("Category ID is invalid.");
+            .GreaterThan(0).WithMessage("Kateqoriya ID müsbət rəqəm olmalıdır (0-dan böyük).")
+            .LessThanOrEqualTo(int.MaxValue).WithMessage("Kateqoriya ID düzgün deyil.");
 
         RuleFor(x => x.Unit)
-            .IsInEnum().WithMessage("Unit of measure must be a valid enum value.");
+            .IsInEnum().WithMessage("Ölçü vahidi düzgün deyil.");
 
         RuleFor(x => x.Price)
-            .GreaterThanOrEqualTo(0).WithMessage("Price must be zero or positive.")
-            .LessThan(decimal.MaxValue).WithMessage("Price is too large.");
+            .GreaterThanOrEqualTo(0).WithMessage("Qiymət sıfır və ya müsbət olmalıdır.")
+            .LessThan(decimal.MaxValue).WithMessage("Qiymət çox böyükdür.");
 
         RuleFor(x => x.StockQuantity)
-            .GreaterThanOrEqualTo(0).WithMessage("Stock quantity must be zero or positive.")
-            .LessThanOrEqualTo(decimal.MaxValue).WithMessage("Stock quantity is too large.")
+            .GreaterThanOrEqualTo(0).WithMessage("Ehtiyat miqdarı sıfır və ya müsbət olmalıdır.")
+            .LessThanOrEqualTo(decimal.MaxValue).WithMessage("Ehtiyat miqdarı çox böyükdür.")
             .When(x => x.StockQuantity.HasValue);
 
         RuleFor(x => x.ImageUrl)
-            .MaximumLength(2048).WithMessage("Image URL must not exceed 2048 characters.")
-            .Must(BeValidUrl).WithMessage("Image URL must be a valid HTTP(S) URL.")
+            .MaximumLength(2048).WithMessage("Şəkil URL-i maksimum 2048 simvoldan çox ola bilməz.")
+            .Must(BeValidUrl).WithMessage("Şəkil URL-i düzgün HTTP(S) URL olmalıdır.")
             .When(x => !string.IsNullOrWhiteSpace(x.ImageUrl));
 
         RuleFor(x => x.Translations)
             .MustCoverAllLanguages(t => t.Language, t => t.Name);
 
         RuleFor(x => x.Dimensions)
-            .MaximumLength(200).WithMessage("Dimensions must not exceed 200 characters.")
+            .MaximumLength(200).WithMessage("Ölçülər maksimum 200 simvoldan çox ola bilməz.")
             .When(x => !string.IsNullOrWhiteSpace(x.Dimensions));
     }
 
@@ -55,31 +55,31 @@ public class UpdateItemRequestValidator : AbstractValidator<UpdateItemRequest>
     public UpdateItemRequestValidator()
     {
         RuleFor(x => x.CategoryId)
-            .GreaterThan(0).WithMessage("Category ID must be a positive number (greater than 0).")
-            .LessThanOrEqualTo(int.MaxValue).WithMessage("Category ID is invalid.");
+            .GreaterThan(0).WithMessage("Kateqoriya ID müsbət rəqəm olmalıdır (0-dan böyük).")
+            .LessThanOrEqualTo(int.MaxValue).WithMessage("Kateqoriya ID düzgün deyil.");
 
         RuleFor(x => x.Unit)
-            .IsInEnum().WithMessage("Unit of measure must be a valid enum value.");
+            .IsInEnum().WithMessage("Ölçü vahidi düzgün deyil.");
 
         RuleFor(x => x.Price)
-            .GreaterThanOrEqualTo(0).WithMessage("Price must be zero or positive.")
-            .LessThan(decimal.MaxValue).WithMessage("Price is too large.");
+            .GreaterThanOrEqualTo(0).WithMessage("Qiymət sıfır və ya müsbət olmalıdır.")
+            .LessThan(decimal.MaxValue).WithMessage("Qiymət çox böyükdür.");
 
         RuleFor(x => x.StockQuantity)
-            .GreaterThanOrEqualTo(0).WithMessage("Stock quantity must be zero or positive.")
-            .LessThanOrEqualTo(decimal.MaxValue).WithMessage("Stock quantity is too large.")
+            .GreaterThanOrEqualTo(0).WithMessage("Ehtiyat miqdarı sıfır və ya müsbət olmalıdır.")
+            .LessThanOrEqualTo(decimal.MaxValue).WithMessage("Ehtiyat miqdarı çox böyükdür.")
             .When(x => x.StockQuantity.HasValue);
 
         RuleFor(x => x.ImageUrl)
-            .MaximumLength(2048).WithMessage("Image URL must not exceed 2048 characters.")
-            .Must(BeValidUrl).WithMessage("Image URL must be a valid HTTP(S) URL.")
+            .MaximumLength(2048).WithMessage("Şəkil URL-i maksimum 2048 simvoldan çox ola bilməz.")
+            .Must(BeValidUrl).WithMessage("Şəkil URL-i düzgün HTTP(S) URL olmalıdır.")
             .When(x => !string.IsNullOrWhiteSpace(x.ImageUrl));
 
         RuleFor(x => x.Translations)
             .MustCoverAllLanguages(t => t.Language, t => t.Name);
 
         RuleFor(x => x.Dimensions)
-            .MaximumLength(200).WithMessage("Dimensions must not exceed 200 characters.")
+            .MaximumLength(200).WithMessage("Ölçülər maksimum 200 simvoldan çox ola bilməz.")
             .When(x => !string.IsNullOrWhiteSpace(x.Dimensions));
     }
 
