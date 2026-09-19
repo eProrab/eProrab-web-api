@@ -12,8 +12,8 @@ using eProrab.Infrastructure.Persistence;
 namespace eProrab.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260908113426_AddSurfaceTypeToItem")]
-    partial class AddSurfaceTypeToItem
+    [Migration("20260919204754_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
