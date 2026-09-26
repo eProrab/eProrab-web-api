@@ -14,8 +14,6 @@ public class MarketProfileConfiguration : IEntityTypeConfiguration<MarketProfile
         builder.Property(m => m.ContactEmail).HasMaxLength(100);
         builder.Property(m => m.Address).HasMaxLength(300);
         builder.Property(m => m.City).HasMaxLength(100);
-        builder.Property(m => m.LogoUrl).HasMaxLength(2048);
-        builder.Property(m => m.BannerUrl).HasMaxLength(2048);
         builder.Property(m => m.Description).HasMaxLength(2000);
         builder.Property(m => m.WorkingHours).HasMaxLength(200);
 

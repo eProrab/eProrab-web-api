@@ -75,11 +75,13 @@ public record CalculationEstimateResponse(
 
 public record RoomInputDto(
     double Area,
-    IReadOnlyList<ComponentInputDto> Components
+    IReadOnlyList<ComponentInputDto> Components,
+    double Height = 2.8
 );
 
 public record ComponentInputDto(
     bool Enabled,
-    string? Tier
+    string? Tier,
+    string? Key = null
 );
 

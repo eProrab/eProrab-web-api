@@ -68,7 +68,7 @@ public static class CalculationEngine
 
         var totalArea = (decimal)input.TotalArea;
 
-        // ── Component weight factor (from rooms) ─────────────────────────
+        // ── Component weight factor (from rooms with dynamic wall height calculation) ──
         // Mirror of: componentFactorSum calculation in Calculator.tsx
         decimal componentFactorSum = 0m;
         if (input.Rooms is { Count: > 0 })
@@ -76,10 +76,20 @@ public static class CalculationEngine
             foreach (var room in input.Rooms)
             {
                 decimal roomComponentSum = 0m;
+                var roomH = room.Height > 0 ? (decimal)room.Height : 2.8m;
+                var wallHeightScale = roomH / 2.8m;
+
                 foreach (var comp in room.Components)
                 {
                     if (comp.Enabled)
-                        roomComponentSum += GetTierWeight(comp.Tier);
+                    {
+                        var weight = GetTierWeight(comp.Tier);
+                        if (string.Equals(comp.Key, "wall", StringComparison.OrdinalIgnoreCase))
+                        {
+                            weight *= wallHeightScale;
+                        }
+                        roomComponentSum += weight;
+                    }
                 }
 
                 // roomWeight = (roomComponentSum / 7) * (room.area / totalArea)
@@ -136,12 +146,14 @@ public sealed record CalculationInput(
 
 public sealed record RoomInput(
     double Area,
-    IReadOnlyList<ComponentInput> Components
+    IReadOnlyList<ComponentInput> Components,
+    double Height = 2.8
 );
 
 public sealed record ComponentInput(
     bool   Enabled,
-    string? Tier
+    string? Tier,
+    string? Key = null
 );
 
 public sealed record CalculationResult(

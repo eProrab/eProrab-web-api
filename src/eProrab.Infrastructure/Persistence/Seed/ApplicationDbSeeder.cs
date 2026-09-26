@@ -113,6 +113,9 @@ public static class ApplicationDbSeeder
             @"ALTER TABLE ""Items"" ADD COLUMN IF NOT EXISTS ""MarketUserId"" uuid;",
             @"ALTER TABLE ""Items"" ADD COLUMN IF NOT EXISTS ""MarketName"" character varying(200);",
             @"CREATE INDEX IF NOT EXISTS ""IX_Items_MarketUserId"" ON ""Items""(""MarketUserId"");",
+            @"ALTER TABLE ""Items"" ALTER COLUMN ""ImageUrl"" TYPE text;",
+            @"ALTER TABLE ""MarketProfiles"" ALTER COLUMN ""LogoUrl"" TYPE text;",
+            @"ALTER TABLE ""MarketProfiles"" ALTER COLUMN ""BannerUrl"" TYPE text;",
         };
 
         foreach (var statement in schemaStatements)
