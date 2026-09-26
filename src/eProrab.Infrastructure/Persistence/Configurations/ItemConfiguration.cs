@@ -13,7 +13,6 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
 
         builder.Property(i => i.Price).HasPrecision(12, 2);
         builder.Property(i => i.StockQuantity).HasPrecision(12, 3);
-        builder.Property(i => i.ImageUrl).HasMaxLength(2048);
         builder.Property(i => i.Dimensions).HasMaxLength(200);
         builder.Property(i => i.MarketName).HasMaxLength(200);
 

@@ -19,8 +19,9 @@ public class CalculationService(IUnitOfWork uow) : ICalculationService
                 .Select(r => new RoomInput(
                     r.Area,
                     r.Components
-                        .Select(c => new ComponentInput(c.Enabled, c.Tier))
-                        .ToList()))
+                        .Select(c => new ComponentInput(c.Enabled, c.Tier, c.Key))
+                        .ToList(),
+                    r.Height > 0 ? r.Height : 2.8))
                 .ToList();
         }
 
@@ -35,6 +36,7 @@ public class CalculationService(IUnitOfWork uow) : ICalculationService
                     foreach (var roomEl in doc.RootElement.EnumerateArray())
                     {
                         var area = roomEl.TryGetProperty("area", out var aProp) ? aProp.GetDouble() : 0;
+                        var height = roomEl.TryGetProperty("height", out var hProp) ? hProp.GetDouble() : 2.8;
                         var comps = new List<ComponentInput>();
                         if (roomEl.TryGetProperty("components", out var compsEl))
                         {
@@ -44,7 +46,7 @@ public class CalculationService(IUnitOfWork uow) : ICalculationService
                                 {
                                     var enabled = compProp.Value.TryGetProperty("enabled", out var enProp) && enProp.GetBoolean();
                                     var tier = compProp.Value.TryGetProperty("tier", out var trProp) ? trProp.GetString() : null;
-                                    comps.Add(new ComponentInput(enabled, tier));
+                                    comps.Add(new ComponentInput(enabled, tier, compProp.Name));
                                 }
                             }
                             else if (compsEl.ValueKind == JsonValueKind.Array)
@@ -53,11 +55,12 @@ public class CalculationService(IUnitOfWork uow) : ICalculationService
                                 {
                                     var enabled = item.TryGetProperty("enabled", out var enProp) && enProp.GetBoolean();
                                     var tier = item.TryGetProperty("tier", out var trProp) ? trProp.GetString() : null;
-                                    comps.Add(new ComponentInput(enabled, tier));
+                                    var key = item.TryGetProperty("key", out var kProp) ? kProp.GetString() : null;
+                                    comps.Add(new ComponentInput(enabled, tier, key));
                                 }
                             }
                         }
-                        list.Add(new RoomInput(area, comps));
+                        list.Add(new RoomInput(area, comps, height));
                     }
                     if (list.Count > 0) return list;
                 }
