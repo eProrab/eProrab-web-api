@@ -41,5 +41,56 @@ public static class AuthEndpoints
                 Results.Ok(await authService.GetCurrentUserAsync(currentUser.UserId!.Value, ct)))
             .WithSummary("Get the authenticated caller's own profile and roles.")
             .RequireAuthorization();
+
+        group.MapPost("/change-password", async (ChangePasswordRequest request, ICurrentUserService currentUser, IAuthService authService, CancellationToken ct) =>
+            {
+                await authService.ChangePasswordAsync(currentUser.UserId!.Value, request, ct);
+                return Results.NoContent();
+            })
+            .WithValidation<ChangePasswordRequest>()
+            .WithSummary("Change the authenticated caller's own password.")
+            .RequireAuthorization();
+
+        group.MapPut("/me", async (UpdateProfileRequest request, ICurrentUserService currentUser, IAuthService authService, CancellationToken ct) =>
+                Results.Ok(await authService.UpdateProfileAsync(currentUser.UserId!.Value, request, ct)))
+            .WithValidation<UpdateProfileRequest>()
+            .WithSummary("Update the authenticated caller's own profile (fullName, phoneNumber).")
+            .RequireAuthorization();
+
+        group.MapPut("/role", async (SelectRoleRequest request, ICurrentUserService currentUser, IAuthService authService, CancellationToken ct) =>
+                Results.Ok(await authService.SetUserRoleAsync(currentUser.UserId!.Value, request.Role, ct)))
+            .WithValidation<SelectRoleRequest>()
+            .WithSummary("Set or update the authenticated caller's own role (Client, Worker, Architect).")
+            .RequireAuthorization();
+
+        group.MapPost("/google-login", async (OAuthLoginRequest request, IAuthService authService, CancellationToken ct) =>
+                Results.Ok(await authService.GoogleLoginAsync(request, ct)))
+            .WithValidation<OAuthLoginRequest>()
+            .WithSummary("Sign in or sign up with Google OAuth. Auto-creates account on first login.")
+            .AllowAnonymous();
+
+        group.MapPost("/facebook-login", async (OAuthLoginRequest request, IAuthService authService, CancellationToken ct) =>
+                Results.Ok(await authService.FacebookLoginAsync(request, ct)))
+            .WithValidation<OAuthLoginRequest>()
+            .WithSummary("Sign in or sign up with Facebook OAuth. Auto-creates account on first login.")
+            .AllowAnonymous();
+
+        group.MapPost("/link-google", async (LinkOAuthProviderRequest request, ICurrentUserService currentUser, IAuthService authService, CancellationToken ct) =>
+            {
+                await authService.LinkGoogleAsync(currentUser.UserId!.Value, request, ct);
+                return Results.NoContent();
+            })
+            .WithValidation<LinkOAuthProviderRequest>()
+            .WithSummary("Link a Google account to the authenticated user's account.")
+            .RequireAuthorization();
+
+        group.MapPost("/link-facebook", async (LinkOAuthProviderRequest request, ICurrentUserService currentUser, IAuthService authService, CancellationToken ct) =>
+            {
+                await authService.LinkFacebookAsync(currentUser.UserId!.Value, request, ct);
+                return Results.NoContent();
+            })
+            .WithValidation<LinkOAuthProviderRequest>()
+            .WithSummary("Link a Facebook account to the authenticated user's account.")
+            .RequireAuthorization();
     }
 }

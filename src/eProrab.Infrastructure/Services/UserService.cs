@@ -32,13 +32,14 @@ public class UserService(
 
         q = query.SortBy?.ToLowerInvariant() switch
         {
-            "name" => query.SortDescending ? q.OrderByDescending(u => u.FullName) : q.OrderBy(u => u.FullName),
-            "email" => query.SortDescending ? q.OrderByDescending(u => u.Email) : q.OrderBy(u => u.Email),
-            _ => query.SortDescending ? q.OrderByDescending(u => u.CreatedAtUtc) : q.OrderBy(u => u.CreatedAtUtc)
+            "name" => query.SortDescending == true ? q.OrderByDescending(u => u.FullName) : q.OrderBy(u => u.FullName),
+            "email" => query.SortDescending == true ? q.OrderByDescending(u => u.Email) : q.OrderBy(u => u.Email),
+            _ => query.SortDescending == true ? q.OrderByDescending(u => u.CreatedAtUtc) : q.OrderBy(u => u.CreatedAtUtc)
         };
 
+        var page = query.Page ?? 1;
         var total = await q.CountAsync(ct);
-        var users = await q.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
+        var users = await q.Skip((page - 1) * query.PageSize).Take(query.PageSize).ToListAsync(ct);
 
         var dtos = new List<UserDto>(users.Count);
         foreach (var user in users)
@@ -46,7 +47,7 @@ public class UserService(
             dtos.Add(await ToDtoAsync(user));
         }
 
-        return PagedResult<UserDto>.Create(dtos, total, query.Page, query.PageSize);
+        return PagedResult<UserDto>.Create(dtos, total, page, query.PageSize);
     }
 
     public async Task<UserDto> GetByIdAsync(Guid id, CancellationToken ct = default)

@@ -17,6 +17,7 @@ public class AuthService(
     IUnitOfWork uow,
     ITokenService tokenService,
     ILanguageProvider languageProvider,
+    IOAuthTokenValidator oauthValidator,
     IOptions<JwtOptions> jwtOptions) : IAuthService
 {
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
@@ -45,10 +46,19 @@ public class AuthService(
             throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
         }
 
-        await userManager.AddToRoleAsync(user, Roles.Client);
+        var role = string.Equals(request.Role, Roles.Worker, StringComparison.OrdinalIgnoreCase)
+            ? Roles.Worker
+            : string.Equals(request.Role, Roles.Architect, StringComparison.OrdinalIgnoreCase)
+                ? Roles.Architect
+                : string.Equals(request.Role, Roles.Market, StringComparison.OrdinalIgnoreCase)
+                    ? Roles.Market
+                    : Roles.Client;
+
+        await userManager.AddToRoleAsync(user, role);
 
         return await IssueTokensAsync(user, ct);
     }
+
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
@@ -120,13 +130,79 @@ public class AuthService(
 
         var roles = await userManager.GetRolesAsync(user);
         var hasWorkerProfile = await uow.WorkerProfiles.Query().AnyAsync(w => w.UserId == userId, ct);
+        var hasMarketProfile = await uow.MarketProfiles.Query().AnyAsync(m => m.UserId == userId, ct);
 
         return new CurrentUserDto(
             user.Id, user.FullName, user.Email!, user.PhoneNumber,
-            user.PreferredLanguage, roles.ToList(), user.IsActive, hasWorkerProfile);
+            user.PreferredLanguage, roles.ToList(), user.IsActive, hasWorkerProfile, hasMarketProfile);
     }
 
-    private async Task<AuthResponse> IssueTokensAsync(ApplicationUser user, CancellationToken ct)
+    public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+
+        var result = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+    }
+
+    public async Task<CurrentUserDto> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+
+        user.FullName = request.FullName.Trim();
+        user.PhoneNumber = request.PhoneNumber?.Trim();
+
+        var result = await userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+
+        return await GetCurrentUserAsync(userId, ct);
+    }
+
+    public async Task<AuthResponse> SetUserRoleAsync(Guid userId, string role, CancellationToken ct = default)
+    {
+        var validRole = string.Equals(role, Roles.Worker, StringComparison.OrdinalIgnoreCase)
+            ? Roles.Worker
+            : string.Equals(role, Roles.Architect, StringComparison.OrdinalIgnoreCase)
+                ? Roles.Architect
+                : string.Equals(role, Roles.Market, StringComparison.OrdinalIgnoreCase)
+                    ? Roles.Market
+                    : string.Equals(role, Roles.Client, StringComparison.OrdinalIgnoreCase)
+                        ? Roles.Client
+                        : throw new ConflictException("Only Client, Worker, Architect, or Market roles are allowed.");
+
+        var user = await userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+
+        var currentRoles = await userManager.GetRolesAsync(user);
+
+        if (currentRoles.Contains(Roles.Admin) && validRole != Roles.Admin)
+        {
+            var admins = await userManager.GetUsersInRoleAsync(Roles.Admin);
+            if (admins.Count(a => a.Id != user.Id && a.IsActive) == 0)
+            {
+                throw new ConflictException("Cannot change role: the system must have at least one active Admin.");
+            }
+        }
+
+        if (currentRoles.Count > 0)
+        {
+            await userManager.RemoveFromRolesAsync(user, currentRoles);
+        }
+
+        await userManager.AddToRoleAsync(user, validRole);
+
+        return await IssueTokensAsync(user, ct);
+    }
+
+    private async Task<AuthResponse> IssueTokensAsync(ApplicationUser user, CancellationToken ct, bool isNewAccount = false)
     {
         var roles = await userManager.GetRolesAsync(user);
         var access = tokenService.GenerateAccessToken(user.Id, user.Email!, user.FullName, roles);
@@ -140,6 +216,198 @@ public class AuthService(
         }, ct);
         await uow.SaveChangesAsync(ct);
 
-        return new AuthResponse(access.Token, access.ExpiresAtUtc, refreshTokenValue, await GetCurrentUserAsync(user.Id, ct));
+        return new AuthResponse(access.Token, access.ExpiresAtUtc, refreshTokenValue, await GetCurrentUserAsync(user.Id, ct), isNewAccount);
+    }
+
+    public async Task<AuthResponse> GoogleLoginAsync(OAuthLoginRequest request, CancellationToken ct = default)
+    {
+        var (googleId, email, fullName) = await oauthValidator.ValidateGoogleTokenAsync(request.IdToken, ct);
+
+        // Check if user exists with this Google ID
+        var user = await userManager.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId, ct);
+
+        if (user is not null)
+        {
+            // User exists with this Google ID - existing user, just log them in
+            if (!user.IsActive)
+            {
+                throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.AccountDeactivated, languageProvider.Current));
+            }
+
+            return await IssueTokensAsync(user, ct, isNewAccount: false);
+        }
+
+        // Check if email already exists
+        var existingByEmail = await userManager.FindByEmailAsync(email);
+        if (existingByEmail is not null)
+        {
+            // Email exists but not linked to Google - auto-link and log in (not a new account)
+            if (!existingByEmail.IsActive)
+            {
+                throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.AccountDeactivated, languageProvider.Current));
+            }
+
+            existingByEmail.GoogleId = googleId;
+            existingByEmail.GoogleLinkedAtUtc = DateTime.UtcNow;
+            await userManager.UpdateAsync(existingByEmail);
+
+            return await IssueTokensAsync(existingByEmail, ct, isNewAccount: false);
+        }
+
+        // Auto-create brand-new user with Google credentials
+        user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            FullName = fullName,
+            PhoneNumber = request.PhoneNumber,
+            PreferredLanguage = request.PreferredLanguage,
+            GoogleId = googleId,
+            GoogleLinkedAtUtc = DateTime.UtcNow,
+            IsActive = true,
+            EmailConfirmed = true // OAuth emails are pre-verified
+        };
+
+        var result = await userManager.CreateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+
+        // Assign Client role by default (user will select their actual role)
+        await userManager.AddToRoleAsync(user, Roles.Client);
+
+        return await IssueTokensAsync(user, ct, isNewAccount: true);
+    }
+
+    public async Task<AuthResponse> FacebookLoginAsync(OAuthLoginRequest request, CancellationToken ct = default)
+    {
+        var (facebookId, email, fullName) = await oauthValidator.ValidateFacebookTokenAsync(request.IdToken, ct);
+
+        // Check if user exists with this Facebook ID
+        var user = await userManager.Users.FirstOrDefaultAsync(u => u.FacebookId == facebookId, ct);
+
+        if (user is not null)
+        {
+            // User exists with this Facebook ID - existing user, just log them in
+            if (!user.IsActive)
+            {
+                throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.AccountDeactivated, languageProvider.Current));
+            }
+
+            return await IssueTokensAsync(user, ct, isNewAccount: false);
+        }
+
+        // Check if email already exists
+        var existingByEmail = await userManager.FindByEmailAsync(email);
+        if (existingByEmail is not null)
+        {
+            // Email exists but not linked to Facebook - auto-link and log in (not a new account)
+            if (!existingByEmail.IsActive)
+            {
+                throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.AccountDeactivated, languageProvider.Current));
+            }
+
+            existingByEmail.FacebookId = facebookId;
+            existingByEmail.FacebookLinkedAtUtc = DateTime.UtcNow;
+            await userManager.UpdateAsync(existingByEmail);
+
+            return await IssueTokensAsync(existingByEmail, ct, isNewAccount: false);
+        }
+
+        // Auto-create new user with Facebook credentials
+        user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            FullName = fullName,
+            PhoneNumber = request.PhoneNumber,
+            PreferredLanguage = request.PreferredLanguage,
+            FacebookId = facebookId,
+            FacebookLinkedAtUtc = DateTime.UtcNow,
+            IsActive = true,
+            EmailConfirmed = true // OAuth emails are pre-verified
+        };
+
+        var result = await userManager.CreateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+
+        // Assign Client role by default (user will select their actual role)
+        await userManager.AddToRoleAsync(user, Roles.Client);
+
+        return await IssueTokensAsync(user, ct, isNewAccount: true);
+    }
+
+    public async Task LinkGoogleAsync(Guid userId, LinkOAuthProviderRequest request, CancellationToken ct = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+
+        if (!user.IsActive)
+        {
+            throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.AccountDeactivated, languageProvider.Current));
+        }
+
+        var (googleId, _, _) = await oauthValidator.ValidateGoogleTokenAsync(request.IdToken, ct);
+
+        // Check if this Google ID is already linked to another account
+        var existing = await userManager.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId && u.Id != userId, ct);
+        if (existing is not null)
+        {
+            throw new ConflictException("This Google account is already linked to another user account.");
+        }
+
+        // Check if this user already has a Google link
+        if (user.GoogleId is not null)
+        {
+            throw new ConflictException("Your account is already linked to a Google account.");
+        }
+
+        user.GoogleId = googleId;
+        user.GoogleLinkedAtUtc = DateTime.UtcNow;
+
+        var result = await userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+    }
+
+    public async Task LinkFacebookAsync(Guid userId, LinkOAuthProviderRequest request, CancellationToken ct = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString())
+            ?? throw new NotFoundException("User", userId);
+
+        if (!user.IsActive)
+        {
+            throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.AccountDeactivated, languageProvider.Current));
+        }
+
+        var (facebookId, _, _) = await oauthValidator.ValidateFacebookTokenAsync(request.IdToken, ct);
+
+        // Check if this Facebook ID is already linked to another account
+        var existing = await userManager.Users.FirstOrDefaultAsync(u => u.FacebookId == facebookId && u.Id != userId, ct);
+        if (existing is not null)
+        {
+            throw new ConflictException("This Facebook account is already linked to another user account.");
+        }
+
+        // Check if this user already has a Facebook link
+        if (user.FacebookId is not null)
+        {
+            throw new ConflictException("Your account is already linked to a Facebook account.");
+        }
+
+        user.FacebookId = facebookId;
+        user.FacebookLinkedAtUtc = DateTime.UtcNow;
+
+        var result = await userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
     }
 }

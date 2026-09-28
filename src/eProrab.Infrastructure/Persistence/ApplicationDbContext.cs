@@ -21,6 +21,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<JobPosting> JobPostings => Set<JobPosting>();
     public DbSet<JobApplication> JobApplications => Set<JobApplication>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<SavedCalculation> SavedCalculations => Set<SavedCalculation>();
+    public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
+    public DbSet<MarketProfile> MarketProfiles => Set<MarketProfile>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

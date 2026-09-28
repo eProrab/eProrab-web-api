@@ -26,13 +26,118 @@ public static class ApplicationDbSeeder
 
         await context.Database.MigrateAsync();
 
+        // Ensure newly introduced tables and columns exist in PostgreSQL
+        var schemaStatements = new[]
+        {
+            @"CREATE TABLE IF NOT EXISTS ""SavedCalculations"" (
+                ""Id"" serial NOT NULL,
+                ""UserId"" uuid NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+                ""Title"" character varying(200) NOT NULL DEFAULT '',
+                ""PropertyType"" character varying(50) NOT NULL DEFAULT '',
+                ""StructureAge"" character varying(50) NOT NULL DEFAULT '',
+                ""RepairStyle"" character varying(50) NOT NULL DEFAULT '',
+                ""TariffTier"" character varying(50) NOT NULL DEFAULT '',
+                ""TotalArea"" double precision NOT NULL DEFAULT 0,
+                ""WallHeight"" double precision NOT NULL DEFAULT 2.8,
+                ""RoomCount"" integer NOT NULL DEFAULT 0,
+                ""DoorCount"" integer NOT NULL DEFAULT 0,
+                ""WindowCount"" integer NOT NULL DEFAULT 0,
+                ""TotalBudget"" numeric NOT NULL DEFAULT 0,
+                ""MaterialCost"" numeric NOT NULL DEFAULT 0,
+                ""LaborCost"" numeric NOT NULL DEFAULT 0,
+                ""OtherCost"" numeric NOT NULL DEFAULT 0,
+                ""IncludeRoughMaterials"" boolean NOT NULL DEFAULT true,
+                ""RoomsJson"" text NOT NULL DEFAULT '[]',
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone,
+                ""IsDeleted"" boolean NOT NULL DEFAULT false,
+                CONSTRAINT ""PK_SavedCalculations"" PRIMARY KEY (""Id"")
+            );",
+            @"ALTER TABLE ""SavedCalculations"" ADD COLUMN IF NOT EXISTS ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now();",
+            @"ALTER TABLE ""SavedCalculations"" ADD COLUMN IF NOT EXISTS ""UpdatedAtUtc"" timestamp with time zone;",
+            @"ALTER TABLE ""SavedCalculations"" ADD COLUMN IF NOT EXISTS ""WallHeight"" double precision NOT NULL DEFAULT 2.8;",
+            @"ALTER TABLE ""SavedCalculations"" ADD COLUMN IF NOT EXISTS ""IncludeRoughMaterials"" boolean NOT NULL DEFAULT true;",
+            @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""WorkerType"" integer NOT NULL DEFAULT 0;",
+            @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""CompanyName"" character varying(200);",
+            @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""Voen"" character varying(50);",
+            @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""TeamSize"" integer;",
+            @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""IsArchitectTeamMember"" boolean NOT NULL DEFAULT false;",
+            @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""ArchitectName"" character varying(200);",
+            @"ALTER TABLE ""WorkerProfiles"" ADD COLUMN IF NOT EXISTS ""ArchitectStudio"" character varying(200);",
+            @"CREATE TABLE IF NOT EXISTS ""DirectMessages"" (
+                ""Id"" serial NOT NULL,
+                ""SenderId"" uuid NOT NULL,
+                ""RecipientId"" uuid NOT NULL,
+                ""SenderName"" character varying(200) NOT NULL DEFAULT '',
+                ""RecipientName"" character varying(200) NOT NULL DEFAULT '',
+                ""SenderRole"" character varying(50) NOT NULL DEFAULT '',
+                ""RecipientRole"" character varying(50) NOT NULL DEFAULT '',
+                ""Text"" text NOT NULL DEFAULT '',
+                ""AttachmentsJson"" text,
+                ""IsRead"" boolean NOT NULL DEFAULT false,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone,
+                ""IsDeleted"" boolean NOT NULL DEFAULT false,
+                CONSTRAINT ""PK_DirectMessages"" PRIMARY KEY (""Id"")
+            );",
+            @"CREATE INDEX IF NOT EXISTS ""IX_DirectMessages_SenderId"" ON ""DirectMessages""(""SenderId"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_DirectMessages_RecipientId"" ON ""DirectMessages""(""RecipientId"");",
+            @"ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""GoogleId"" character varying(100);",
+            @"ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""FacebookId"" character varying(100);",
+            @"ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""GoogleLinkedAtUtc"" timestamp with time zone;",
+            @"ALTER TABLE ""Users"" ADD COLUMN IF NOT EXISTS ""FacebookLinkedAtUtc"" timestamp with time zone;",
+            @"CREATE INDEX IF NOT EXISTS ""IX_Users_GoogleId"" ON ""Users""(""GoogleId"");",
+            @"CREATE INDEX IF NOT EXISTS ""IX_Users_FacebookId"" ON ""Users""(""FacebookId"");",
+            @"CREATE TABLE IF NOT EXISTS ""MarketProfiles"" (
+                ""Id"" serial NOT NULL,
+                ""UserId"" uuid NOT NULL,
+                ""StoreName"" character varying(200) NOT NULL,
+                ""Voen"" character varying(50),
+                ""Description"" character varying(2000),
+                ""ContactPhone"" character varying(50),
+                ""ContactEmail"" character varying(100),
+                ""Address"" character varying(300),
+                ""City"" character varying(100),
+                ""LogoUrl"" character varying(2048),
+                ""BannerUrl"" character varying(2048),
+                ""WorkingHours"" character varying(200),
+                ""IsVerified"" boolean NOT NULL DEFAULT false,
+                ""IsActive"" boolean NOT NULL DEFAULT true,
+                ""CreatedAtUtc"" timestamp with time zone NOT NULL DEFAULT now(),
+                ""UpdatedAtUtc"" timestamp with time zone,
+                ""IsDeleted"" boolean NOT NULL DEFAULT false,
+                CONSTRAINT ""PK_MarketProfiles"" PRIMARY KEY (""Id"")
+            );",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_MarketProfiles_UserId"" ON ""MarketProfiles""(""UserId"");",
+            @"ALTER TABLE ""Items"" ADD COLUMN IF NOT EXISTS ""Dimensions"" character varying(200);",
+            @"ALTER TABLE ""Items"" ADD COLUMN IF NOT EXISTS ""MarketUserId"" uuid;",
+            @"ALTER TABLE ""Items"" ADD COLUMN IF NOT EXISTS ""MarketName"" character varying(200);",
+            @"CREATE INDEX IF NOT EXISTS ""IX_Items_MarketUserId"" ON ""Items""(""MarketUserId"");",
+            @"ALTER TABLE ""Items"" ALTER COLUMN ""ImageUrl"" TYPE text;",
+            @"ALTER TABLE ""MarketProfiles"" ALTER COLUMN ""LogoUrl"" TYPE text;",
+            @"ALTER TABLE ""MarketProfiles"" ALTER COLUMN ""BannerUrl"" TYPE text;",
+        };
+
+        foreach (var statement in schemaStatements)
+        {
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(statement);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Schema statement failed or notice: {Statement}", statement);
+            }
+        }
+
         await SeedRolesAsync(provider);
         await SeedAdminAsync(provider, logger);
         await SeedCategoriesAsync(context);
         await SeedSpecializationsAsync(context);
-        await SeedItemsAsync(context);
+        await ClearItemsAsync(context);
 
         await context.SaveChangesAsync();
+
     }
 
     private static async Task SeedRolesAsync(IServiceProvider provider)
@@ -151,48 +256,12 @@ public static class ApplicationDbSeeder
         };
     }
 
-    private static async Task SeedItemsAsync(ApplicationDbContext context)
+    private static async Task ClearItemsAsync(ApplicationDbContext context)
     {
         if (await context.Items.AnyAsync())
         {
-            return;
+            context.Items.RemoveRange(context.Items);
+            await context.SaveChangesAsync();
         }
-
-        var cement = await context.Categories.FirstAsync(c => c.Slug == "cement-concrete");
-        var tools = await context.Categories.FirstAsync(c => c.Slug == "hand-tools");
-
-        context.Items.AddRange(
-            new Item
-            {
-                Sku = "CEM-50KG",
-                CategoryId = cement.Id,
-                Unit = UnitOfMeasure.Bag,
-                Price = 9.50m,
-                StockQuantity = 500,
-                IsActive = true,
-                Translations =
-                [
-                    new ItemTranslation { Language = Language.Az, Name = "Portland sementi 50kg", Description = "Ümumi tikinti işləri üçün M400 sement." },
-                    new ItemTranslation { Language = Language.En, Name = "Portland Cement 50kg", Description = "M400-grade cement for general construction work." },
-                    new ItemTranslation { Language = Language.Ru, Name = "Портландцемент 50кг", Description = "Цемент марки М400 для общестроительных работ." }
-                ]
-            },
-            new Item
-            {
-                Sku = "HMR-STD",
-                CategoryId = tools.Id,
-                Unit = UnitOfMeasure.Piece,
-                Price = 12.90m,
-                StockQuantity = 120,
-                IsActive = true,
-                Translations =
-                [
-                    new ItemTranslation { Language = Language.Az, Name = "Bənna çəkici", Description = "Standart tikinti çəkici, poladdan hazırlanıb." },
-                    new ItemTranslation { Language = Language.En, Name = "Mason's Hammer", Description = "Standard steel construction hammer." },
-                    new ItemTranslation { Language = Language.Ru, Name = "Молоток каменщика", Description = "Стандартный строительный молоток из стали." }
-                ]
-            });
-
-        await context.SaveChangesAsync();
     }
 }

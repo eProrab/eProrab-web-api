@@ -13,7 +13,8 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
 
         builder.Property(i => i.Price).HasPrecision(12, 2);
         builder.Property(i => i.StockQuantity).HasPrecision(12, 3);
-        builder.Property(i => i.ImageUrl).HasMaxLength(2048);
+        builder.Property(i => i.Dimensions).HasMaxLength(200);
+        builder.Property(i => i.MarketName).HasMaxLength(200);
 
         builder.HasMany(i => i.Translations)
             .WithOne(t => t.Item)
@@ -22,6 +23,7 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
 
         builder.HasIndex(i => i.CategoryId);
         builder.HasIndex(i => i.IsActive);
+        builder.HasIndex(i => i.MarketUserId);
     }
 }
 

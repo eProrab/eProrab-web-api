@@ -36,8 +36,10 @@ public static class DependencyInjection
             .AddDefaultTokenProviders();
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<OAuthOptions>(configuration.GetSection(OAuthOptions.SectionName));
 
         services.AddHttpContextAccessor();
+        services.AddHttpClient();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -47,7 +49,10 @@ public static class DependencyInjection
         services.AddScoped<ILanguageProvider, LanguageProvider>();
         services.AddScoped<IUserDirectoryService, UserDirectoryService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IOAuthTokenValidator, OAuthTokenValidator>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IChatService, ChatService>();
+
 
         return services;
     }
