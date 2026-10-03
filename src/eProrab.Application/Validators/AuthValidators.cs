@@ -64,3 +64,12 @@ public class SelectRoleRequestValidator : AbstractValidator<SelectRoleRequest>
             .WithMessage("Yalnız 'Client', 'Worker', 'Architect' və ya 'Market' rolları seçilə bilər.");
     }
 }
+
+public class UpdateProfileRequestValidator : AbstractValidator<UpdateProfileRequest>
+{
+    public UpdateProfileRequestValidator()
+    {
+        RuleFor(x => x.FullName).NotEmpty().MaximumLength(150);
+        RuleFor(x => x.PhoneNumber).MaximumLength(30);
+    }
+}

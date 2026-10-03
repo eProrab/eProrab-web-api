@@ -83,14 +83,34 @@ public class CategoryService(IUnitOfWork uow, ILanguageProvider languageProvider
             .FirstOrDefaultAsync(c => c.Id == id, ct)
             ?? throw new NotFoundException("Category", id);
 
+        if (!string.IsNullOrWhiteSpace(request.Slug) && request.Slug != category.Slug)
+        {
+            var slugTaken = await uow.Categories.Query().AnyAsync(c => c.Slug == request.Slug && c.Id != id, ct);
+            if (slugTaken)
+                throw new ConflictException(Messages.Get(SystemMessageKey.SlugAlreadyExists, languageProvider.Current));
+            category.Slug = request.Slug;
+        }
+
         category.DisplayOrder = request.DisplayOrder;
         category.IsActive = request.IsActive;
         category.UpdatedAtUtc = DateTime.UtcNow;
 
-        foreach (var translation in category.Translations)
+        foreach (var reqTranslation in request.Translations)
         {
-            var updated = request.Translations.First(t => t.Language == translation.Language);
-            translation.Name = updated.Name;
+            var existing = category.Translations.FirstOrDefault(t => t.Language == reqTranslation.Language);
+            if (existing is not null)
+            {
+                existing.Name = reqTranslation.Name;
+            }
+            else
+            {
+                category.Translations.Add(new CategoryTranslation
+                {
+                    CategoryId = category.Id,
+                    Language = reqTranslation.Language,
+                    Name = reqTranslation.Name
+                });
+            }
         }
 
         uow.Categories.Update(category);

@@ -17,6 +17,8 @@ public class ApplicationUser : IdentityUser<Guid>
 
     public bool IsActive { get; set; } = true;
 
+    public bool MustChangePassword { get; set; } = false;
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     // OAuth provider associations

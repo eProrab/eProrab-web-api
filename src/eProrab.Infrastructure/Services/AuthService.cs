@@ -18,9 +18,31 @@ public class AuthService(
     ITokenService tokenService,
     ILanguageProvider languageProvider,
     IOAuthTokenValidator oauthValidator,
+    ILoginRateLimiter loginRateLimiter,
+    Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
     IOptions<JwtOptions> jwtOptions) : IAuthService
 {
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
+
+    private string GetClientIp()
+    {
+        var httpContext = httpContextAccessor.HttpContext;
+        if (httpContext == null) return "127.0.0.1";
+
+        if (httpContext.Request.Headers.TryGetValue("X-Forwarded-For", out var forwarded))
+        {
+            var ip = forwarded.ToString().Split(',')[0].Trim();
+            if (!string.IsNullOrEmpty(ip)) return ip;
+        }
+
+        if (httpContext.Request.Headers.TryGetValue("X-Real-IP", out var realIp))
+        {
+            var ip = realIp.ToString().Trim();
+            if (!string.IsNullOrEmpty(ip)) return ip;
+        }
+
+        return httpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+    }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
@@ -30,12 +52,22 @@ public class AuthService(
             throw new ConflictException(Messages.Get(SystemMessageKey.EmailAlreadyRegistered, languageProvider.Current));
         }
 
+        var normalizedPhone = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+        if (normalizedPhone is not null)
+        {
+            var phoneExists = await userManager.Users.AnyAsync(u => u.PhoneNumber == normalizedPhone, ct);
+            if (phoneExists)
+            {
+                throw new ConflictException(Messages.Get(SystemMessageKey.PhoneNumberAlreadyRegistered, languageProvider.Current));
+            }
+        }
+
         var user = new ApplicationUser
         {
             UserName = request.Email,
             Email = request.Email,
             FullName = request.FullName,
-            PhoneNumber = request.PhoneNumber,
+            PhoneNumber = normalizedPhone,
             PreferredLanguage = request.PreferredLanguage,
             IsActive = true
         };
@@ -62,9 +94,19 @@ public class AuthService(
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
-        var user = await userManager.FindByEmailAsync(request.Email);
+        var email = request.Email.Trim();
+        var clientIp = GetClientIp();
+
+        // 1. Check if IP or Account is currently locked out & apply progressive delay (>= 3 attempts)
+        await loginRateLimiter.CheckLimitAndDelayAsync(clientIp, email, ct);
+
+        var user = await userManager.FindByEmailAsync(email);
         if (user is null || !await userManager.CheckPasswordAsync(user, request.Password))
         {
+            // Record failed attempt for IP & Account.
+            // Throws TooManyRequestsException (429) if threshold (5 attempts in 15 min) is met.
+            await loginRateLimiter.RecordFailedAttemptAsync(clientIp, email, ct);
+
             throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.InvalidCredentials, languageProvider.Current));
         }
 
@@ -72,6 +114,9 @@ public class AuthService(
         {
             throw new UnauthorizedAccessException(Messages.Get(SystemMessageKey.AccountDeactivated, languageProvider.Current));
         }
+
+        // Reset failed attempt counters on successful login
+        await loginRateLimiter.ResetAttemptsAsync(clientIp, email);
 
         return await IssueTokensAsync(user, ct);
     }
@@ -134,7 +179,8 @@ public class AuthService(
 
         return new CurrentUserDto(
             user.Id, user.FullName, user.Email!, user.PhoneNumber,
-            user.PreferredLanguage, roles.ToList(), user.IsActive, hasWorkerProfile, hasMarketProfile);
+            user.PreferredLanguage, roles.ToList(), user.IsActive, hasWorkerProfile, hasMarketProfile,
+            user.MustChangePassword);
     }
 
     public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken ct = default)
@@ -147,6 +193,12 @@ public class AuthService(
         {
             throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
         }
+
+        if (user.MustChangePassword)
+        {
+            user.MustChangePassword = false;
+            await userManager.UpdateAsync(user);
+        }
     }
 
     public async Task<CurrentUserDto> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken ct = default)
@@ -154,8 +206,18 @@ public class AuthService(
         var user = await userManager.FindByIdAsync(userId.ToString())
             ?? throw new NotFoundException("User", userId);
 
+        var normalizedPhone = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+        if (normalizedPhone is not null)
+        {
+            var phoneExists = await userManager.Users.AnyAsync(u => u.Id != userId && u.PhoneNumber == normalizedPhone, ct);
+            if (phoneExists)
+            {
+                throw new ConflictException(Messages.Get(SystemMessageKey.PhoneNumberAlreadyRegistered, languageProvider.Current));
+            }
+        }
+
         user.FullName = request.FullName.Trim();
-        user.PhoneNumber = request.PhoneNumber?.Trim();
+        user.PhoneNumber = normalizedPhone;
 
         var result = await userManager.UpdateAsync(user);
         if (!result.Succeeded)
