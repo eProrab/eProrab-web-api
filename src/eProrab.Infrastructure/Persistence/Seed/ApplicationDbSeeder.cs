@@ -157,11 +157,30 @@ public static class ApplicationDbSeeder
         var userManager = provider.GetRequiredService<UserManager<ApplicationUser>>();
         var configuration = provider.GetRequiredService<IConfiguration>();
 
-        var email = configuration["SeedAdmin:Email"] ?? "admin@eprorab.az";
-        var password = configuration["SeedAdmin:Password"] ?? "ChangeMe123!";
+        var configuredEmail = configuration["SeedAdmin:Email"];
+        var email = string.IsNullOrWhiteSpace(configuredEmail) ? "admin@eprorab.az" : configuredEmail.Trim();
 
-        if (await userManager.FindByEmailAsync(email) is not null)
+        var configuredPassword = configuration["SeedAdmin:Password"];
+        var password = string.IsNullOrWhiteSpace(configuredPassword) ? "ChangeMe123!" : configuredPassword.Trim();
+
+        var existing = await userManager.FindByEmailAsync(email);
+        if (existing is not null)
         {
+            if (!await userManager.IsInRoleAsync(existing, Roles.Admin))
+            {
+                await userManager.AddToRoleAsync(existing, Roles.Admin);
+                logger.LogInformation("Assigned Admin role to existing admin user {Email}.", email);
+            }
+
+            if (!await userManager.CheckPasswordAsync(existing, password))
+            {
+                var resetToken = await userManager.GeneratePasswordResetTokenAsync(existing);
+                var resetResult = await userManager.ResetPasswordAsync(existing, resetToken, password);
+                if (resetResult.Succeeded)
+                {
+                    logger.LogInformation("Synchronized seed password for admin account {Email}.", email);
+                }
+            }
             return;
         }
 

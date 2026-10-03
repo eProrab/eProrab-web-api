@@ -1,7 +1,10 @@
 using eProrab.Application.Common;
+using eProrab.Application.Interfaces;
+using eProrab.Application.Localization;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace eProrab.API.Middleware;
 
@@ -20,10 +23,24 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             NotFoundException => (StatusCodes.Status404NotFound, "Not Found"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
             ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden"),
+            TooManyRequestsException => (StatusCodes.Status429TooManyRequests, "Too Many Requests"),
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
             ValidationException => (StatusCodes.Status400BadRequest, "Validation Failed"),
             _ => (StatusCodes.Status500InternalServerError, "Unexpected Error")
         };
+
+        var detail = exception.Message;
+
+        if (exception is DbUpdateException dbEx &&
+            (dbEx.InnerException?.Message.Contains("IX_Users_PhoneNumber", StringComparison.OrdinalIgnoreCase) == true ||
+             dbEx.Message.Contains("IX_Users_PhoneNumber", StringComparison.OrdinalIgnoreCase)))
+        {
+            var langProvider = httpContext.RequestServices.GetService<ILanguageProvider>();
+            var lang = langProvider?.Current ?? eProrab.Domain.Enums.Language.Az;
+            detail = Messages.Get(SystemMessageKey.PhoneNumberAlreadyRegistered, lang);
+            statusCode = StatusCodes.Status409Conflict;
+            title = "Conflict";
+        }
 
         if (statusCode == StatusCodes.Status500InternalServerError)
         {
@@ -34,9 +51,18 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
         {
             Status = statusCode,
             Title = title,
-            Detail = exception.Message,
+            Detail = detail,
             Instance = httpContext.Request.Path
         };
+
+        if (exception is TooManyRequestsException tooManyRequestsException)
+        {
+            if (tooManyRequestsException.RetryAfterSeconds.HasValue)
+            {
+                httpContext.Response.Headers.RetryAfter = tooManyRequestsException.RetryAfterSeconds.Value.ToString();
+                problemDetails.Extensions["retryAfterSeconds"] = tooManyRequestsException.RetryAfterSeconds.Value;
+            }
+        }
 
         if (exception is ValidationException validationException)
         {

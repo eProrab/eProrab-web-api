@@ -30,6 +30,12 @@ public static class Messages
             [Language.En] = "This email is already registered.",
             [Language.Ru] = "Этот email уже зарегистрирован."
         },
+        [SystemMessageKey.PhoneNumberAlreadyRegistered] = new()
+        {
+            [Language.Az] = "Bu telefon nömrəsi artıq qeydiyyatdan keçib.",
+            [Language.En] = "This phone number is already registered.",
+            [Language.Ru] = "Этот номер телефона уже зарегистрирован."
+        },
         [SystemMessageKey.InvalidOrExpiredRefreshToken] = new()
         {
             [Language.Az] = "Sessiya etibarsızdır və ya vaxtı bitib. Yenidən daxil olun.",
@@ -119,6 +125,12 @@ public static class Messages
             [Language.Az] = "Sonuncu admin istifadəçini silmək və ya deaktiv etmək olmaz.",
             [Language.En] = "You cannot delete or deactivate the last remaining admin.",
             [Language.Ru] = "Нельзя удалить или деактивировать последнего администратора."
+        },
+        [SystemMessageKey.AccountLockedOut] = new()
+        {
+            [Language.Az] = "15 dəqiqə ərzində 5 dəfə ardıcıl yanlış şifrə daxil edildiyi üçün giriş 15 dəqiqəlik bloklanıb.",
+            [Language.En] = "Access has been locked for 15 minutes due to 5 consecutive failed login attempts.",
+            [Language.Ru] = "Вход заблокирован на 15 минут из-за 5 подряд неверных попыток ввода пароля."
         }
     };
 

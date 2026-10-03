@@ -10,7 +10,8 @@ public record UserDto(
     Language PreferredLanguage,
     IReadOnlyList<string> Roles,
     bool IsActive,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    bool MustChangePassword = false);
 
 /// <summary>Admin-only: create a user directly with a chosen role, skipping self-registration.</summary>
 public record CreateUserRequest(

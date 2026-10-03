@@ -13,3 +13,10 @@ public sealed class ConflictException(string message) : AppException(message);
 /// <summary>Caller is authenticated but not allowed to perform this action → 403.</summary>
 public sealed class ForbiddenException(string message = "You are not allowed to perform this action.")
     : AppException(message);
+
+/// <summary>Rate limit exceeded or account locked out → 429.</summary>
+public sealed class TooManyRequestsException(string message, int? retryAfterSeconds = null)
+    : AppException(message)
+{
+    public int? RetryAfterSeconds { get; } = retryAfterSeconds;
+}

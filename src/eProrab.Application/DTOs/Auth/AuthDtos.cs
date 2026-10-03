@@ -33,7 +33,8 @@ public record CurrentUserDto(
     IReadOnlyList<string> Roles,
     bool IsActive,
     bool HasWorkerProfile,
-    bool HasMarketProfile = false);
+    bool HasMarketProfile = false,
+    bool MustChangePassword = false);
 
 public record AuthResponse(
     string AccessToken,

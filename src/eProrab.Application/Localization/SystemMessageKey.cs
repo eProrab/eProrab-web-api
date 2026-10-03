@@ -8,6 +8,7 @@ public enum SystemMessageKey
     InvalidCredentials,
     AccountDeactivated,
     EmailAlreadyRegistered,
+    PhoneNumberAlreadyRegistered,
     InvalidOrExpiredRefreshToken,
     ItemNotFound,
     CategoryNotFound,
@@ -22,5 +23,6 @@ public enum SystemMessageKey
     CannotApplyToOwnJob,
     SkuAlreadyExists,
     SlugAlreadyExists,
-    CannotDeleteLastAdmin
+    CannotDeleteLastAdmin,
+    AccountLockedOut
 }

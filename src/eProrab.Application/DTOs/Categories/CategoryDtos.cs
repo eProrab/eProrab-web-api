@@ -22,4 +22,5 @@ public record CreateCategoryRequest(
 public record UpdateCategoryRequest(
     int DisplayOrder,
     bool IsActive,
-    IReadOnlyList<CategoryTranslationDto> Translations);
+    IReadOnlyList<CategoryTranslationDto> Translations,
+    string? Slug = null);

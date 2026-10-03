@@ -68,13 +68,23 @@ public class UserService(
             throw new NotFoundException("Role", request.Role);
         }
 
+        var normalizedPhone = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+        if (normalizedPhone is not null)
+        {
+            var phoneExists = await userManager.Users.AnyAsync(u => u.PhoneNumber == normalizedPhone, ct);
+            if (phoneExists)
+            {
+                throw new ConflictException(Messages.Get(SystemMessageKey.PhoneNumberAlreadyRegistered, languageProvider.Current));
+            }
+        }
+
         var user = new ApplicationUser
         {
             UserName = request.Email,
             Email = request.Email,
             EmailConfirmed = true,
             FullName = request.FullName,
-            PhoneNumber = request.PhoneNumber,
+            PhoneNumber = normalizedPhone,
             PreferredLanguage = request.PreferredLanguage,
             IsActive = request.IsActive
         };
@@ -93,8 +103,18 @@ public class UserService(
     {
         var user = await userManager.FindByIdAsync(id.ToString()) ?? throw new NotFoundException("User", id);
 
+        var normalizedPhone = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+        if (normalizedPhone is not null)
+        {
+            var phoneExists = await userManager.Users.AnyAsync(u => u.Id != id && u.PhoneNumber == normalizedPhone, ct);
+            if (phoneExists)
+            {
+                throw new ConflictException(Messages.Get(SystemMessageKey.PhoneNumberAlreadyRegistered, languageProvider.Current));
+            }
+        }
+
         user.FullName = request.FullName;
-        user.PhoneNumber = request.PhoneNumber;
+        user.PhoneNumber = normalizedPhone;
         user.PreferredLanguage = request.PreferredLanguage;
 
         var result = await userManager.UpdateAsync(user);
@@ -155,6 +175,9 @@ public class UserService(
         {
             throw new ConflictException(string.Join(" ", result.Errors.Select(e => e.Description)));
         }
+
+        user.MustChangePassword = true;
+        await userManager.UpdateAsync(user);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
@@ -183,6 +206,6 @@ public class UserService(
     {
         var roles = await userManager.GetRolesAsync(user);
         return new UserDto(user.Id, user.FullName, user.Email!, user.PhoneNumber,
-            user.PreferredLanguage, roles.ToList(), user.IsActive, user.CreatedAtUtc);
+            user.PreferredLanguage, roles.ToList(), user.IsActive, user.CreatedAtUtc, user.MustChangePassword);
     }
 }

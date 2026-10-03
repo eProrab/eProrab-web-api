@@ -52,7 +52,7 @@ public static class DependencyInjection
         services.AddScoped<IOAuthTokenValidator, OAuthTokenValidator>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IChatService, ChatService>();
-
+        services.AddSingleton<ILoginRateLimiter, LoginRateLimiter>();
 
         return services;
     }
